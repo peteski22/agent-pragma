@@ -37,7 +37,7 @@ Collect project rules from the project's rule directory. Rule file locations var
 - OpenCode: files listed in `opencode.json` `instructions` array
 - Other agents: check agent documentation for project rule conventions
 
-Use the Glob tool to discover rule files, then the Read tool to load them.
+For Claude Code, use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. OpenCode auto-loads rules from `opencode.json` at the platform level.
 
 **Path-scoped filtering:** Always include universal and local-supplements rule files. For files with `paths:` frontmatter, include only if at least one declared path pattern matches a changed file from Step 1. Files without `paths:` frontmatter are treated as global and always included. This prevents unrelated language rules from being applied (e.g., Go rules on a Python-only change).
 
@@ -53,7 +53,7 @@ Record which rule files were loaded.
 
 ## Step 2a: Check for local supplements
 
-Check for a local supplements file at the project root and read it if present. This is a per-user, unversioned file for machine-specific overrides (e.g., custom validation commands).
+Check for a local supplements file (e.g., `CLAUDE.local.md` for Claude Code) at the project root and read it if present. This is a per-user, unversioned file for machine-specific overrides (e.g., custom validation commands).
 
 If it exists, read it. Pay particular attention to any "Validation Commands" section, which overrides defaults.
 

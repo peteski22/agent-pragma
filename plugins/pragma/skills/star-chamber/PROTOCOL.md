@@ -223,8 +223,14 @@ Always include universal and local-supplements rule files. For files with `paths
 
 If no project rules directory exists, skip rule injection — star-chamber will review without project-specific context.
 
+The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules at the platform level — the skill does not need to parse `opencode.json` directly.
+
 ```bash
 # Re-derive the review target file list (each Bash invocation is isolated).
+STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"
+RULES_FILE="$SC_TMPDIR/rules.txt"
+: > "$RULES_FILE"
+
 FILES="$(
   ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null \
     || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null \
@@ -232,7 +238,7 @@ FILES="$(
   | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)'
 )"
 
-# Load project rules, filtering by path scope.
+# Load project rules, filtering by path scope, and persist for Step 3.
 RULE_DIR=".claude/rules"
 if [[ -d "$RULE_DIR" ]]; then
   for f in "$RULE_DIR"/*.md; do
@@ -241,13 +247,13 @@ if [[ -d "$RULE_DIR" ]]; then
 
     # Always include universal and local-supplements (not path-scoped).
     if [[ "$basename" == "universal.md" ]] || [[ "$basename" == "local-supplements.md" ]]; then
-      cat "$f"
+      cat "$f" >> "$RULES_FILE"
       continue
     fi
 
     # If no paths: frontmatter, treat as global — always include.
     if ! grep -q '^paths:' "$f"; then
-      cat "$f"
+      cat "$f" >> "$RULES_FILE"
       continue
     fi
 
@@ -270,11 +276,11 @@ if [[ -d "$RULE_DIR" ]]; then
     done < <(awk '/^paths:[[:space:]]*$/{p=1;next} p&&/^[[:space:]]*-[[:space:]]/{gsub(/^[[:space:]]*-[[:space:]]*/,"",$0);print;next} p{exit}' "$f")
 
     if $matched; then
-      cat "$f"
+      cat "$f" >> "$RULES_FILE"
     fi
   done
 else
-  echo "No project rules directory found — reviewing without project-specific context."
+  echo "No project rules directory found — reviewing without project-specific context." >&2
 fi
 ```
 

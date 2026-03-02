@@ -332,7 +332,7 @@ If missing, offer to copy from `$PLUGIN_ROOT/reference/go/golangci-lint.yml`, re
   /implement <task>    - implement with validation loop
   /review              - validate current changes
 
-**Star-Chamber:** Configures itself on first run. Run `/star-chamber` to set up provider configuration.
+**Star-Chamber:** Run `/star-chamber` — first invocation launches interactive provider setup.
 ```
 
 **If uv is missing**, include this warning:

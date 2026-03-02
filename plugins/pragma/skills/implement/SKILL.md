@@ -32,13 +32,13 @@ Collect project rules from the project's rule directory. Rule file locations var
 - OpenCode: files listed in `opencode.json` `instructions` array
 - Other agents: check agent documentation for project rule conventions
 
-Use the Glob tool to discover rule files, then the Read tool to load them. Collect those that exist and are readable. A file is considered "found" only if it exists and can be successfully read.
+For Claude Code, use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. OpenCode auto-loads rules from `opencode.json` at the platform level. Collect those that exist and are readable. A file is considered "found" only if it exists and can be successfully read.
 
 **Note:** Path-scoped rules (those with `paths:` frontmatter) may be auto-loaded by the agent platform only for matching files. When collecting rules manually, read the frontmatter and apply path-scoped rules only to the target directories they match.
 
 ### Step 2a: Check for local supplements
 
-Check for a local supplements file at the project root and read it if present. This is a per-user, unversioned file for machine-specific overrides (e.g., custom validation commands).
+Check for a local supplements file (e.g., `CLAUDE.local.md` for Claude Code) at the project root and read it if present. This is a per-user, unversioned file for machine-specific overrides (e.g., custom validation commands).
 
 If it exists, read it. Pay particular attention to any "Validation Commands" section, which overrides defaults.
 
@@ -47,7 +47,7 @@ If it exists, read it. Pay particular attention to any "Validation Commands" sec
 Read each discovered rule file.
 Apply rules in order of precedence (most specific first):
 
-```
+```text
 1. Path-scoped language rules with matching paths (highest precedence)
 2. Universal rules
 ```
@@ -67,10 +67,10 @@ If no project-specific rules were found, attempt to load the universal baseline 
 1. **Resolve plugin root:** The skill loader provides the base directory in the header: `Base directory for this skill: <path>`. Derive `PLUGIN_ROOT` as `<base directory>/../..` (skills live at `<plugin-root>/skills/<name>/`, so two levels up).
 
 2. **Validate plugin root:** Check that `$PLUGIN_ROOT/.claude-plugin/plugin.json` exists.
-   - If missing → skip fallback, note in report: "Project rules: none found. Using plugin baseline rules. Run /setup-project to configure project-specific rules."
+   - If missing → skip fallback, note in report: "Project rules: none found. Plugin baseline unavailable. Proceeding with built-in validator rulesets. Run /setup-project to configure project-specific rules."
 
 3. **Validate baseline file:** Does `$PLUGIN_ROOT/claude-md/universal/base.md` exist and is it readable?
-   - If file missing or unreadable → skip fallback, note in report: "Project rules: none found. Using plugin baseline rules. Run /setup-project to configure project-specific rules."
+   - If file missing or unreadable → skip fallback, note in report: "Project rules: none found. Plugin baseline unavailable. Proceeding with built-in validator rulesets. Run /setup-project to configure project-specific rules."
 
 4. **Load baseline:** If both checks pass, read `$PLUGIN_ROOT/claude-md/universal/base.md` as the baseline rules.
    - Note in report: "Fallback baseline: loaded from pragma plugin"
