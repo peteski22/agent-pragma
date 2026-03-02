@@ -38,28 +38,19 @@
    ```text
    > /validate
 
-   ## Validation Results
+   # Validation Results
 
-   ### Files Changed
-   - cmd/server/main.go
-   - internal/handler/auth.go
+   | Validator | Result | HARD | SHOULD | WARN |
+   |-----------|--------|------|--------|------|
+   | security | ✓ pass | 0 | 0 | 0 |
+   | state-machine | ✓ pass | 0 | 0 | 0 |
+   | go-effective | ✗ fail | 1 | 0 | 0 |
 
-   ### Security Validation
-   ✓ passed (no HARD, no SHOULD)
+   ## HARD violations (must fix)
+   - **go-effective** `auth.go:45` — Exported function `HandleLogin` missing doc comment
 
-   ### State Machine Validation
-   ✓ passed (no HARD, no SHOULD)
-
-   ### Go Effective Validation
-   ✗ FAILED (1 HARD)
-
-   **HARD violations:**
-   1. auth.go:45 - Exported function `HandleLogin` missing doc comment
-
-   ### Summary
-   - Hard violations: 1
-   - Should violations: 0
-   - Warnings: 0
+   ## Verdict
+   **FAIL** — 1 HARD violation must be fixed before commit
    ```
 
 Optionally run `/setup-project` to configure project-specific rules — see [Configure Project Rules](#configure-project-rules-setup-project).
