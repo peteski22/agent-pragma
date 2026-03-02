@@ -27,25 +27,20 @@ If uncertain, err on the side of including more directories rather than fewer. E
 
 ### Step 2: Collect project rules
 
-Collect rules from `.claude/rules/*.md` at the project root:
+Collect project rules from the project's rule directory. Rule file locations vary by agent platform:
+- Claude Code: `.claude/rules/*.md`
+- OpenCode: files listed in `opencode.json` `instructions` array
+- Other agents: check agent documentation for project rule conventions
 
-```
-Check: .claude/rules/*.md (all files, auto-loaded by Claude Code)
-```
+Use the Glob tool to discover rule files, then the Read tool to load them. Collect those that exist and are readable. A file is considered "found" only if it exists and can be successfully read.
 
-Use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. Collect those that exist and are readable. A file is considered "found" only if it exists and can be successfully read.
-
-**Note:** Path-scoped rules (those with `paths:` frontmatter) are auto-loaded by Claude Code only for matching files. When collecting rules manually, read the frontmatter and apply path-scoped rules only to the target directories they match.
+**Note:** Path-scoped rules (those with `paths:` frontmatter) may be auto-loaded by the agent platform only for matching files. When collecting rules manually, read the frontmatter and apply path-scoped rules only to the target directories they match.
 
 ### Step 2a: Check for local supplements
 
-Check for `CLAUDE.local.md` at the project root and read it if present:
+Check for a local supplements file at the project root and read it if present. This is a per-user, unversioned file for machine-specific overrides (e.g., custom validation commands).
 
-```bash
-[[ -f CLAUDE.local.md ]] && echo "local-supplements:exists"
-```
-
-If it exists, read it. Pay particular attention to any "Validation Commands" section, which overrides defaults. Claude Code may also auto-load this file into context; the explicit read here ensures local supplements are always applied regardless of execution environment.
+If it exists, read it. Pay particular attention to any "Validation Commands" section, which overrides defaults.
 
 ### Step 3: Read and apply rules
 
@@ -53,8 +48,8 @@ Read each discovered rule file.
 Apply rules in order of precedence (most specific first):
 
 ```
-1. .claude/rules/{lang}.md with matching paths (path-scoped, highest precedence)
-2. .claude/rules/universal.md (universal rules)
+1. Path-scoped language rules with matching paths (highest precedence)
+2. Universal rules
 ```
 
 Earlier rules override later rules where they conflict.
@@ -63,19 +58,19 @@ If two rules conflict and precedence is unclear, prefer the more specific rule a
 
 ### Step 3a: Fallback baseline (conditional)
 
-**This step only applies if NO `.claude/rules/*.md` files were found in Step 2.**
+**This step only applies if NO project rule files were found in Step 2.**
 
-If project-specific rules were found and loaded, skip this step entirely and note in report: "Fallback baseline: not needed (project rules loaded)"
+If project-specific rules were found and loaded, skip this step entirely and note in report: "Project rules: loaded (N files)"
 
 If no project-specific rules were found, attempt to load the universal baseline from the plugin:
 
 1. **Resolve plugin root:** The skill loader provides the base directory in the header: `Base directory for this skill: <path>`. Derive `PLUGIN_ROOT` as `<base directory>/../..` (skills live at `<plugin-root>/skills/<name>/`, so two levels up).
 
 2. **Validate plugin root:** Check that `$PLUGIN_ROOT/.claude-plugin/plugin.json` exists.
-   - If missing → skip fallback, note in report: "Fallback baseline: failed (plugin root invalid at $PLUGIN_ROOT)"
+   - If missing → skip fallback, note in report: "Project rules: none found. Using plugin baseline rules. Run /setup-project to configure project-specific rules."
 
 3. **Validate baseline file:** Does `$PLUGIN_ROOT/claude-md/universal/base.md` exist and is it readable?
-   - If file missing or unreadable → skip fallback, note in report: "Fallback baseline: failed (file not found at $PLUGIN_ROOT/claude-md/universal/base.md)"
+   - If file missing or unreadable → skip fallback, note in report: "Project rules: none found. Using plugin baseline rules. Run /setup-project to configure project-specific rules."
 
 4. **Load baseline:** If both checks pass, read `$PLUGIN_ROOT/claude-md/universal/base.md` as the baseline rules.
    - Note in report: "Fallback baseline: loaded from pragma plugin"
@@ -87,7 +82,7 @@ This fallback ensures projects without `/setup-project` still get essential rule
 Track which rule files were loaded for the final report, including:
 - Which project-specific rule files were loaded (if any)
 - Fallback baseline status: not needed, loaded, skipped, or failed (with reason)
-- CLAUDE.local.md (auto-loaded or explicitly read in Step 2a)
+- Local supplements status (loaded or not found)
 
 ### Step 5: Execute pre-implementation setup
 
@@ -126,7 +121,7 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
    - Look for build artifacts (.egg-info, .venv, dist/, node_modules/, target/) indicating local packages.
    - If the task involves sharing code, find existing shared packages first.
    - If the GitHub issue lists multiple approaches, investigate each sufficiently to make an informed decision.
-   - **Architecture violation guard:** If discovered patterns violate architecture rules from the project's `.claude/rules/` or language-specific validators (e.g., models defined in route files, business logic in handlers, services that are actually repositories):
+   - **Architecture violation guard:** If discovered patterns violate architecture rules from the project rules or language-specific validators (e.g., models defined in route files, business logic in handlers, services that are actually repositories):
      1. Do not replicate the violations — follow documented layer responsibilities instead.
      2. Note the pre-existing deviation in the Phase 4 report.
      3. If the codebase systematically deviates (e.g., no repository layer exists, all models are in route files), follow correct architecture for new code where feasible without breaking existing imports or interfaces.
@@ -157,17 +152,17 @@ After implementation is complete, run validation.
 1. **Run linters first** (deterministic checks):
 
    **Check rules for custom validation commands:**
-   Look for a "Validation Commands" section in these sources, in precedence order:
-   1. `CLAUDE.local.md` (from Step 2a — highest priority)
-   2. Path-scoped `.claude/rules/*.md` files (from Step 2)
-   3. Universal `.claude/rules/universal.md` (from Step 2)
+   Look for a "Validation Commands" section in loaded project rules, in precedence order:
+   1. Local supplements (from Step 2a — highest priority)
+   2. Path-scoped rule files (from Step 2)
+   3. Universal rule file (from Step 2)
 
    If custom commands exist at any level, use the highest-precedence match. Otherwise, fall back to these defaults:
    - Go: `golangci-lint run --fix -v`
    - Python: `uv run pre-commit run --all-files`
    - TypeScript: `pnpm run lint` or `npx biome check .`
 
-   **Priority order:** See `claude-md/universal/validation-precedence.md` for the canonical precedence rules. In short: CLAUDE.local.md > path-scoped `.claude/rules/{lang}.md` > `.claude/rules/universal.md` > built-in defaults. CLAUDE.local.md has the highest priority to allow per-machine customization without modifying version-controlled rules.
+   **Priority order:** Local supplements > path-scoped language rules > universal rules > built-in defaults. Local supplements have the highest priority to allow per-machine customization without modifying version-controlled rules.
 
    Fix any issues before proceeding.
 
@@ -214,9 +209,9 @@ Only after validation passes:
 **Branch:** `branch-name` (created | existing | continued | skipped)
 
 **Rules Applied:**
-- .claude/rules/python.md (scoped to backend/**)
-- .claude/rules/universal.md
-- CLAUDE.local.md (from Step 2a)
+- python rules (scoped to backend/**)
+- universal rules
+- local supplements
 
 **Changes:**
 - file.go: [what changed]
