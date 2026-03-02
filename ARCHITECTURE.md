@@ -4,34 +4,34 @@ This document explains the design decisions behind agent-pragma.
 
 ## User Flow: End-to-End
 
-This diagram shows the two modes of operation: standalone skills (no setup required) and the enhanced pipeline (with project rules from `/setup-project`).
+This diagram shows how all skills share the same validators. Skills work immediately with built-in rules; `/setup-project` adds project-specific rules that enhance `/implement` and `/review`.
 
 ```mermaid
 flowchart TB
     subgraph Standalone["Works Immediately (no setup)"]
-        V["/validate"] --> VR["Dispatch validators by file type"]
-        VR --> VS["Severity-graded report"]
-
-        R["/review"] --> RR["Inject rules if available"]
-        RR --> RV["Run validators"]
-        RV --> RS["Review report"]
-
+        V["/validate"] --> Validators
+        R["/review"] --> Validators
         SC["/star-chamber"] --> SCR["Multi-LLM fan-out"]
         SCR --> SCS["Consensus report"]
     end
 
-    subgraph Enhanced["With /setup-project"]
-        S["/setup-project"] --> SR["Creates project rule files"]
-        SR --> SI["Rules injected into /implement, /review"]
-    end
+    Validators["Dispatch validators by file type"] --> Report["Severity-graded report"]
 
-    subgraph Pipeline["Full Pipeline"]
-        I["/implement task"] --> P0["Phase 0: Inject rules"]
+    subgraph Pipeline["Full Pipeline (/implement)"]
+        I["/implement task"] --> P0["Phase 0: Inject project rules"]
         P0 --> P12["Phase 1-2: Implement"]
         P12 --> P3["Phase 3: Validate"]
-        P3 --> P4["Phase 4: Report"]
     end
+
+    P3 --> Validators
+    Report --> P4["Phase 4: Aggregate + format report"]
+
+    S["/setup-project"] --> SR["Creates project rule files (.claude/rules/*.md)"]
+    SR -.->|"enhances"| P0
+    SR -.->|"enhances"| R
 ```
+
+> **Note:** `/star-chamber` is an advisory skill — it fans out to multiple LLMs for consensus feedback, not through the shared validator pipeline.
 
 ## Output Examples
 
@@ -58,6 +58,8 @@ After `/implement` or `/review`, you get both formats:
 | Validator        | Status | Hard | Should | Warn |
 |------------------|--------|------|--------|------|
 | security         | ✓ Pass | 0    | 0      | 1    |
+| error-handling   | ✓ Pass | 0    | 0      | 0    |
+| state-machine    | ✓ Pass | 0    | 0      | 0    |
 | python-style     | ✓ Pass | 0    | 0      | 0    |
 | typescript-style | ✓ Pass | 0    | 0      | 0    |
 
@@ -87,6 +89,8 @@ Ready for /review or commit.
     "pass": true,
     "validators": [
       {"name": "security", "pass": true, "hard": 0, "should": 0, "warn": 1},
+      {"name": "error-handling", "pass": true, "hard": 0, "should": 0, "warn": 0},
+      {"name": "state-machine", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "python-style", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "typescript-style", "pass": true, "hard": 0, "should": 0, "warn": 0}
     ],
@@ -106,19 +110,22 @@ Ready for /review or commit.
 
 ## The Problem
 
-Project rule files are **guidance** - they can be ignored or forgotten by the LLM. We needed:
+Project rule files (`.claude/rules/*.md`) are **guidance** — they can be ignored or forgotten by the LLM. We needed:
 
 1. Rules that are **mechanically injected**, not hoped-for
 2. Validation that **verifies compliance**, not trusts it
 3. A system that works for **monorepos with multiple languages**
-
-Validators work standalone with built-in rulesets — no project rules or `/setup-project` required. Project rules are an enhancement for team consistency and monorepo path scoping, not a prerequisite.
+4. A tool that delivers value **immediately**, without requiring setup before first use
 
 ## Core Principles
 
+### 0. Zero-config by default
+
+Validators work standalone with built-in rules — no project rules or `/setup-project` required. Each validator ships with its own rule definitions (the skill prompt templates and `contract.json` in the plugin's `skills/` directory). Project rule files (`.claude/rules/*.md`) are an enhancement for team consistency and monorepo path scoping, not a prerequisite.
+
 ### 1. Validators are authoritative, not project rules
 
-Project rule files provide guidance. Validators **enforce** rules.
+Project rule files (`.claude/rules/*.md`) provide guidance. Validators **enforce** rules.
 
 If there's a conflict between what a project rule file says and what a validator checks, the validator wins. This removes ambiguity.
 
@@ -303,13 +310,13 @@ flowchart TD
 
 ## Validator Contracts
 
-Each validator has a `contract.json` defining its scope:
+Each validator has a `contract.json` defining its scope and assumptions.
 
 | Validator | Language | Scope | Excludes | Assumes |
 |-----------|----------|-------|----------|---------|
-| **security** | All | Secrets, Injection, Path traversal, Auth gaps | Code style, Language idioms, Performance | (none) |
-| **error-handling** | All | Swallowed errors, Ignored return values, Silent fallbacks, Overly broad catches | Error message style, Security implications | (none) |
-| **state-machine** | All | State transitions, Terminal state correctness, Cleanup enforcement | Code style, Performance | (none) |
+| **security** | All | Secrets, Injection, Path traversal, Auth gaps | Code style, Language idioms, Performance | No tool deps (pipeline-gated) |
+| **error-handling** | All | Swallowed errors, Ignored return values, Silent fallbacks, Overly broad catches | Error message style, Security implications | No tool deps (pipeline-gated) |
+| **state-machine** | All | State transitions, Terminal state correctness, Cleanup enforcement | Code style, Performance | No tool deps (pipeline-gated) |
 | **go-effective** | Go | Naming, Error handling, Interface design, Control flow | Security, Go Proverbs, Formatting | gofmt, golangci-lint |
 | **go-proverbs** | Go | Idiomatic Go philosophy, Concurrency patterns, Abstraction | Security, Effective Go details, Formatting | golangci-lint |
 | **python-style** | Python | Google docstrings, Type hints, Error handling, Layered architecture | Security, Performance | ruff, ty/mypy, pre-commit |
@@ -317,7 +324,7 @@ Each validator has a `contract.json` defining its scope:
 
 ### Validator Dependency Chain
 
-Semantic validators assume deterministic linters have passed. This is enforced by Phase 3 ordering.
+Language-specific semantic validators require their linters to have passed first (tool dependency). Cross-language validators have no tool dependencies but are pipeline-gated — they run after linters pass as a convention for signal quality.
 
 ```mermaid
 flowchart LR
@@ -346,10 +353,12 @@ flowchart LR
     golangci --> goeff
     golangci --> goprov
 
-    sec -.->|"no dependencies"| Det
-    errh -.->|"no dependencies"| Det
-    stm -.->|"no dependencies"| Det
+    sec ~~~ Det
+    errh ~~~ Det
+    stm ~~~ Det
 ```
+
+> **Note:** security, error-handling, and state-machine have no linter tool dependencies — they run on any file type without requiring language-specific linters. In the pipeline, they still run after the lint-pass gate as a convention for signal quality.
 
 **HARD vs SHOULD by validator:**
 
@@ -362,6 +371,8 @@ flowchart LR
 | **go-proverbs** | Share memory by communicating, Errors are values, Handle errors gracefully | Interface size, Zero value, Clear vs clever |
 | **python-style** | Exception chaining with `from e`, No bare `except:` | Google docstrings, Modern type hints (`str \| None`) |
 | **typescript-style** | Strict mode enabled, Functional components only | Proper hook dependencies, TanStack Query for server state |
+
+Cross-language validators (security, error-handling, state-machine) check structural patterns across all languages. Language-specific validators check language idioms. For example, error-handling flags empty catch blocks in any language; python-style flags bare `except:` (a Python-specific idiom). Where both could apply, the cross-language validator owns the structural check and the language validator owns the idiom check.
 
 This prevents:
 - Validators reporting on the same thing (noise)
@@ -435,6 +446,20 @@ Phase 4 combines all validator results into a single output:
         "hard_count": 0,
         "should_count": 0,
         "warning_count": 1
+      },
+      {
+        "name": "error-handling",
+        "pass": true,
+        "hard_count": 0,
+        "should_count": 0,
+        "warning_count": 0
+      },
+      {
+        "name": "state-machine",
+        "pass": true,
+        "hard_count": 0,
+        "should_count": 0,
+        "warning_count": 0
       },
       {
         "name": "python-style",

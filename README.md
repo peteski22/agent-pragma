@@ -6,6 +6,13 @@
 
 **Works with both [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenCode](https://opencode.ai).**
 
+## System Requirements
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenCode](https://opencode.ai)
+- Git
+- [uv](https://docs.astral.sh/uv/) (for `/star-chamber` and Python-based validators)
+- Language-specific validators require their ecosystem tools: Go (`golangci-lint`), TypeScript (`biome`, `tsc`), Python (`ruff`, `ty`/`mypy`)
+
 ## Quick Start
 
 ### Claude Code
@@ -40,6 +47,12 @@
    ### Security Validation
    ✓ passed (no HARD, no SHOULD)
 
+   ### Error Handling Validation
+   ✓ passed (no HARD, no SHOULD)
+
+   ### State Machine Validation
+   ✓ passed (no HARD, no SHOULD)
+
    ### Go Effective Validation
    ✗ FAILED (1 HARD)
 
@@ -70,7 +83,7 @@ make install AGENT=opencode
 /validate
 ```
 
-This symlinks skills and generates agents and commands into `~/.config/opencode/`. Run `/validate` in any project — works immediately.
+This symlinks skills and generates agents and commands into `~/.config/opencode/`. Run `/validate` in any project — works immediately with built-in rules. For project-specific rules, see [Configure Project Rules](#configure-project-rules-setup-project).
 
 To install into a specific project instead of globally:
 
@@ -184,11 +197,13 @@ When you want implementation with automatic validation:
   biome: passed
   tsc: passed
   security: passed
+  error-handling: passed
+  state-machine: passed
   typescript-style: passed
 
 [Phase 4] Complete
   Files changed: 2
-  Validators run: 4
+  Validators run: 6
   Issues: 0
 ```
 
