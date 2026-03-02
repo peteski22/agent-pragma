@@ -131,7 +131,7 @@ Star-chamber supports two invocation modes. Determine which applies based on how
 You are a senior software architect advising on design decisions.
 
 ## Project Context
-{Injected CLAUDE.md rules}
+{Injected project rules}
 {Architecture context if available}
 
 ## Design Question
@@ -214,10 +214,25 @@ Gather context to include with the review prompt:
 
 **Project rules (if they exist):**
 
-Load rules from `.claude/rules/`, filtering path-scoped rules to only those relevant to the review target files (from Step 1). Always include `universal.md` and `local-supplements.md`. For files with `paths:` frontmatter, include only if at least one declared path pattern matches a file in the review target list. Files without `paths:` frontmatter are treated as global and always included.
+Load project rules, filtering path-scoped rules to only those relevant to the review target files (from Step 1). Rule file locations vary by agent platform:
+- Claude Code: `.claude/rules/*.md`
+- OpenCode: files listed in `opencode.json` `instructions` array
+- Other agents: check agent documentation for project rule conventions
+
+Always include universal and local-supplements rule files. For files with `paths:` frontmatter, include only if at least one declared path pattern matches a file in the review target list. Files without `paths:` frontmatter are treated as global and always included.
+
+If no project rules directory exists, skip rule injection — star-chamber will review without project-specific context.
+
+The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules at the platform level — the skill does not need to parse `opencode.json` directly.
+
+For parallel (non-debate) mode, create `SC_TMPDIR` here so rules can be persisted for Step 3: `SC_TMPDIR="$(mktemp -d)"`. In debate mode, `SC_TMPDIR` is created in Step 4 — set it there instead.
 
 ```bash
 # Re-derive the review target file list (each Bash invocation is isolated).
+STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="$(mktemp -d)"
+RULES_FILE="$SC_TMPDIR/rules.txt"
+: > "$RULES_FILE"
+
 FILES="$(
   ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null \
     || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null \
@@ -225,46 +240,50 @@ FILES="$(
   | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)'
 )"
 
-# Load modular rules from .claude/rules/, filtering by path scope.
+# Load project rules, filtering by path scope, and persist for Step 3.
 RULE_DIR=".claude/rules"
-for f in "$RULE_DIR"/*.md; do
-  [[ -f "$f" ]] || continue
-  basename="$(basename "$f")"
+if [[ -d "$RULE_DIR" ]]; then
+  for f in "$RULE_DIR"/*.md; do
+    [[ -f "$f" ]] || continue
+    basename="$(basename "$f")"
 
-  # Always include universal and local-supplements (not path-scoped).
-  if [[ "$basename" == "universal.md" ]] || [[ "$basename" == "local-supplements.md" ]]; then
-    cat "$f"
-    continue
-  fi
+    # Always include universal and local-supplements (not path-scoped).
+    if [[ "$basename" == "universal.md" ]] || [[ "$basename" == "local-supplements.md" ]]; then
+      cat "$f" >> "$RULES_FILE"
+      continue
+    fi
 
-  # If no paths: frontmatter, treat as global — always include.
-  if ! grep -q '^paths:' "$f"; then
-    cat "$f"
-    continue
-  fi
+    # If no paths: frontmatter, treat as global — always include.
+    if ! grep -q '^paths:' "$f"; then
+      cat "$f" >> "$RULES_FILE"
+      continue
+    fi
 
-  # For path-scoped rules, include only if a target file matches a declared pattern.
-  matched=false
-  while IFS= read -r pattern; do
-    [[ -z "$pattern" ]] && continue
-    pattern="${pattern#- }"
-    pattern="${pattern%\"}"
-    pattern="${pattern#\"}"
-    while IFS= read -r file_path; do
-      [[ -z "$file_path" ]] && continue
-      # shellcheck disable=SC2254
-      if [[ "$file_path" == $pattern ]]; then
-        matched=true
-        break
-      fi
-    done <<< "$FILES"
-    $matched && break
-  done < <(awk '/^paths:[[:space:]]*$/{p=1;next} p&&/^[[:space:]]*-[[:space:]]/{gsub(/^[[:space:]]*-[[:space:]]*/,"",$0);print;next} p{exit}' "$f")
+    # For path-scoped rules, include only if a target file matches a declared pattern.
+    matched=false
+    while IFS= read -r pattern; do
+      [[ -z "$pattern" ]] && continue
+      pattern="${pattern#- }"
+      pattern="${pattern%\"}"
+      pattern="${pattern#\"}"
+      while IFS= read -r file_path; do
+        [[ -z "$file_path" ]] && continue
+        # shellcheck disable=SC2254
+        if [[ "$file_path" == $pattern ]]; then
+          matched=true
+          break
+        fi
+      done <<< "$FILES"
+      $matched && break
+    done < <(awk '/^paths:[[:space:]]*$/{p=1;next} p&&/^[[:space:]]*-[[:space:]]/{gsub(/^[[:space:]]*-[[:space:]]*/,"",$0);print;next} p{exit}' "$f")
 
-  if $matched; then
-    cat "$f"
-  fi
-done
+    if $matched; then
+      cat "$f" >> "$RULES_FILE"
+    fi
+  done
+else
+  echo "No project rules directory found — reviewing without project-specific context." >&2
+fi
 ```
 
 **Architecture context (if exists):**
@@ -278,7 +297,7 @@ Build a structured prompt for Star-Chamber. Use the example template pattern bel
 
 **Prompt construction:** Write the prompt to a temp file using `cat >` with a single-quoted heredoc for the static template, then append dynamic content (file contents, rules) with `cat >>`. Single-quoted heredocs (`<< 'EOF'`) prevent shell expansion, which is what you want for the template — but it also means `$VARIABLE` references inside the heredoc are passed as literal text, not expanded. Append dynamic content separately.
 
-For parallel (non-debate) mode, create a temporary directory for the prompt file: `SC_TMPDIR="$(mktemp -d)"`. In debate mode, `SC_TMPDIR` is created in Step 4.
+`SC_TMPDIR` was created in Step 2 (parallel mode) or Step 4 (debate mode). Re-set it at the top of each bash block since variables do not persist between invocations.
 
 Example:
 ```bash
@@ -287,7 +306,8 @@ You are a senior software craftsman reviewing code for quality, idioms, and arch
 
 ## Project Context
 EOF
-cat ".claude/rules/universal.md" >> "$PROMPT_FILE" 2>/dev/null
+# Append project rules collected in Step 2 (if any).
+cat "$SC_TMPDIR/rules.txt" >> "$PROMPT_FILE" 2>/dev/null
 cat "ARCHITECTURE.md" >> "$PROMPT_FILE" 2>/dev/null
 printf '\n## Code to Review\n' >> "$PROMPT_FILE"
 for f in file1.py file2.py; do printf '\n### %s\n' "$f"; cat "$f"; done >> "$PROMPT_FILE"

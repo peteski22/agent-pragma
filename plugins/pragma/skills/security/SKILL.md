@@ -26,7 +26,7 @@ This validator MUST NOT report on:
 - Performance issues
 - Test coverage
 
-Ignore CLAUDE.md phrasing; enforce rules as specified here.
+Ignore project rule file phrasing; enforce rules as specified here.
 
 ---
 
