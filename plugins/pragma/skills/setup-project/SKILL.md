@@ -299,72 +299,6 @@ true
 
 If missing, offer to copy from `$PLUGIN_ROOT/reference/go/golangci-lint.yml`, replacing `{org}` and `{repo}`.
 
-### Star-Chamber provider config
-
-Check if star-chamber config exists:
-```bash
-test -f "$HOME/.config/star-chamber/providers.json" || echo "no-star-chamber-config"
-```
-
-If missing **and `uv` is available** (from the Step 7 check), offer to set it up. If `uv` is missing, skip this offer and tell the user: "Skipping star-chamber config — `uv` is not installed." The Step 9 output includes install instructions.
-
-```
-/star-chamber requires provider configuration for multi-LLM reviews.
-
-Would you like to set up the configuration?
-
-[Yes, set it up] / [No, skip for now]
-```
-
-**If user accepts**, ask about API key management:
-
-```
-How would you like to manage API keys?
-
-[any-llm.ai platform] - Single ANY_LLM_KEY, centralized key vault, usage tracking
-[Direct provider keys] - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY individually
-```
-
-**If user chooses "any-llm.ai platform":**
-```bash
-uv run --no-project --isolated "$PLUGIN_ROOT/reference/star-chamber/generate_config.py" --platform
-```
-
-Then include in the summary:
-```
-**Star-Chamber configured (any-llm.ai platform mode):**
-  Config: ~/.config/star-chamber/providers.json
-
-  Setup:
-    1. Create account at https://any-llm.ai
-    2. Create a project and add your provider API keys
-    3. Copy your project key and set:
-       export ANY_LLM_KEY="ANY.v1...."
-```
-
-**If user chooses "Direct provider keys":**
-```bash
-uv run --no-project --isolated "$PLUGIN_ROOT/reference/star-chamber/generate_config.py" --direct
-```
-
-Then include in the summary:
-```
-**Star-Chamber configured (direct keys mode):**
-  Config: ~/.config/star-chamber/providers.json
-
-  Set these environment variables:
-    export OPENAI_API_KEY="sk-..."
-    export ANTHROPIC_API_KEY="sk-ant-..."
-    export GEMINI_API_KEY="..."
-
-  Edit the config to remove providers you don't have keys for.
-```
-
-**If user declines setup**, note in summary:
-```
-**Star-Chamber:** Not configured (run /star-chamber to set up later)
-```
-
 ## Step 9: Output summary
 
 ```
@@ -398,7 +332,7 @@ Then include in the summary:
   /implement <task>    - implement with validation loop
   /review              - validate current changes
 
-Run `/star-chamber` for usage details and options.
+**Star-Chamber:** Configures itself on first run. Run `/star-chamber` to set up provider configuration.
 ```
 
 **If uv is missing**, include this warning:
