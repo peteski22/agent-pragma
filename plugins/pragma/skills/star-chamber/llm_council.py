@@ -433,6 +433,10 @@ def main() -> None:
         action="store_true",
         help="Output required SDK packages for configured/specified providers and exit",
     )
+    parser.add_argument(
+        "--input-file", "-I",
+        help="Read prompt from file instead of stdin",
+    )
     args = parser.parse_args()
 
     # Load provider config.
@@ -547,8 +551,26 @@ def main() -> None:
         print(json.dumps(output, indent=2))
         sys.exit(0)
 
-    # Read prompt from stdin.
-    prompt = sys.stdin.read()
+    # Read prompt from file or stdin.
+    if args.input_file:
+        input_path = Path(args.input_file)
+        try:
+            prompt = input_path.read_text()
+        except FileNotFoundError:
+            print(
+                json.dumps({"error": f"Input file not found: {args.input_file}"}),
+            )
+            sys.exit(1)
+        except (OSError, UnicodeDecodeError) as exc:
+            print(
+                json.dumps({
+                    "error": f"Failed to read input file: {args.input_file}",
+                    "details": sanitize_error(str(exc)),
+                }),
+            )
+            sys.exit(1)
+    else:
+        prompt = sys.stdin.read()
 
     # Determine files to review.
     files_to_review = args.file if args.file else get_changed_files()

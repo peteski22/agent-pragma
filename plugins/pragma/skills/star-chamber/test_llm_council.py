@@ -436,6 +436,117 @@ class TestLocalProviderErrorMessage:
                 assert "Authentication failed" in result["error"], f"Failed to detect auth error: {error_text}"
 
 
+class TestInputFile:
+    """Verify --input-file reads prompt from a file instead of stdin."""
+
+    def _make_config(self, tmp_path):
+        """Create a minimal providers.json for main() to load."""
+        config = {
+            "providers": [
+                {"provider": "openai", "model": "gpt-5.2", "api_key": "sk-test"},
+            ],
+        }
+        config_file = tmp_path / "providers.json"
+        config_file.write_text(json.dumps(config))
+        return config_file
+
+    def test_input_file_reads_from_file(self, tmp_path):
+        """Prompt should be read from --input-file when provided."""
+        import io
+
+        from llm_council import main
+
+        config_file = self._make_config(tmp_path)
+        prompt_file = tmp_path / "prompt.txt"
+        prompt_file.write_text("Review this code please")
+
+        mock_acompletion = _mock_acompletion()
+        mock_module = MagicMock()
+        mock_module.acompletion = mock_acompletion
+
+        with (
+            patch("sys.argv", ["llm_council.py", "--input-file", str(prompt_file)]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch.dict(os.environ, {"STAR_CHAMBER_CONFIG": str(config_file)}, clear=False),
+            patch.dict(sys.modules, {"any_llm": mock_module}),
+        ):
+            main()
+
+        output = json.loads(mock_stdout.getvalue())
+        assert output["reviews"]
+        # Verify the prompt reached acompletion (first positional or messages kwarg).
+        call_kwargs = mock_acompletion.call_args.kwargs
+        messages = call_kwargs["messages"]
+        assert "Review this code please" in messages[0]["content"]
+
+    def test_input_file_missing_exits_with_error(self, tmp_path):
+        """Non-existent --input-file should produce error JSON and exit 1."""
+        import io
+
+        from llm_council import main
+
+        config_file = self._make_config(tmp_path)
+
+        with (
+            patch("sys.argv", ["llm_council.py", "--input-file", "/nonexistent/prompt.txt"]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch.dict(os.environ, {"STAR_CHAMBER_CONFIG": str(config_file)}, clear=False),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+        output = json.loads(mock_stdout.getvalue())
+        assert "Input file not found" in output["error"]
+
+    def test_input_file_directory_exits_with_error(self, tmp_path):
+        """Directory path should produce error JSON and exit 1, not a traceback."""
+        import io
+
+        from llm_council import main
+
+        config_file = self._make_config(tmp_path)
+
+        with (
+            patch("sys.argv", ["llm_council.py", "--input-file", str(tmp_path)]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch.dict(os.environ, {"STAR_CHAMBER_CONFIG": str(config_file)}, clear=False),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+        output = json.loads(mock_stdout.getvalue())
+        assert "Failed to read input file" in output["error"]
+
+    def test_stdin_still_works_without_input_file(self, tmp_path):
+        """Stdin should be used when --input-file is omitted (backwards compat)."""
+        import io
+
+        from llm_council import main
+
+        config_file = self._make_config(tmp_path)
+
+        mock_acompletion = _mock_acompletion()
+        mock_module = MagicMock()
+        mock_module.acompletion = mock_acompletion
+
+        with (
+            patch("sys.argv", ["llm_council.py"]),
+            patch("sys.stdin", io.StringIO("Prompt from stdin")),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch.dict(os.environ, {"STAR_CHAMBER_CONFIG": str(config_file)}, clear=False),
+            patch.dict(sys.modules, {"any_llm": mock_module}),
+        ):
+            main()
+
+        output = json.loads(mock_stdout.getvalue())
+        assert output["reviews"]
+        call_kwargs = mock_acompletion.call_args.kwargs
+        messages = call_kwargs["messages"]
+        assert "Prompt from stdin" in messages[0]["content"]
+
+
 class TestListSdksLocalProviders:
     """Verify --list-sdks output categorizes local providers correctly."""
 

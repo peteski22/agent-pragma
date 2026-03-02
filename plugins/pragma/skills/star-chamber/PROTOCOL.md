@@ -30,6 +30,8 @@
 - **Skill invocation:** The skill loader provides the base directory in the header. The skill sets `STAR_CHAMBER_PATH` to that directory.
 - **Agent invocation:** The agent discovers the path via Glob and sets `STAR_CHAMBER_PATH` to the directory containing PROTOCOL.md.
 
+**Avoid pipelines (`|`) when shell variables are involved.** Some AI coding tool runtimes (including Claude Code as of March 2026) silently empty all `$VAR` expansions when a `|` appears in the command. The `--input-file` flag on `llm_council.py` exists specifically to avoid `cat "$FILE" | uv run ...` patterns. Use `--input-file` instead of piping.
+
 `$PLUGIN_ROOT` can be derived from `$STAR_CHAMBER_PATH` as `$STAR_CHAMBER_PATH/../..` when needed (e.g., to access reference configs). Validate the derivation by checking that `$PLUGIN_ROOT/.claude-plugin/plugin.json` exists before using it.
 
 ## Step 0: Check Prerequisites
@@ -318,9 +320,9 @@ Provide your review as structured JSON:
 EOF
 ```
 
-Then pipe the assembled file to `llm_council.py` in Step 4:
+Then pass the assembled file to `llm_council.py` in Step 4:
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; cat "$SC_TMPDIR/prompt.txt" | uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" [--provider <name>...] [--file <path>...]
+STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" --input-file "$SC_TMPDIR/prompt.txt" [--provider <name>...] [--file <path>...]
 ```
 
 ## Step 4: Fan Out to Star-Chamber
@@ -346,10 +348,10 @@ This outputs JSON with `required_sdks` array listing needed packages (e.g., `["a
 
 The simplest approach: all providers review independently in a single round.
 
-Execute a single parallel review. Pipe the prompt file (built in Step 3) to `llm_council.py`:
+Execute a single parallel review. Pass the prompt file (built in Step 3) to `llm_council.py`:
 
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; cat "$SC_TMPDIR/prompt.txt" | uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" [--provider <name>...] [--file <path>...]
+STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" --input-file "$SC_TMPDIR/prompt.txt" [--provider <name>...] [--file <path>...]
 ```
 
 **Important:** The `uv run` command and all its arguments must be on a **single line**. Do NOT use `\` line continuations — they break under Claude Code's Bash tool. The core `any-llm-sdk` is pinned via `pyproject.toml`. Provider-specific SDKs (from `--list-sdks` output's `required_sdks` array) are added as `--with <sdk>` flags (e.g., `--with anthropic --with google-genai`).
@@ -407,7 +409,7 @@ The fixed parent path lets the user grant blanket Bash permission once, while th
 
 For each round, redirect `llm_council.py` stdout directly to a round file instead of capturing in a shell variable. **Re-set both `STAR_CHAMBER_PATH` and `SC_TMPDIR`** at the top of every bash block — they do not persist between invocations:
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<literal path from mktemp output>"; cat "$SC_TMPDIR/prompt.txt" | uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" > "$SC_TMPDIR/round-1.json"
+STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<literal path from mktemp output>"; uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" --input-file "$SC_TMPDIR/prompt.txt" > "$SC_TMPDIR/round-1.json"
 ```
 
 Do NOT redirect stderr into the round file (no `2>&1`) — `uv` prints install messages to stderr which would corrupt the JSON.
@@ -449,7 +451,7 @@ Please provide your perspective on these points. Note where you agree, disagree,
 
 **Convergence check:** If responses in round N are substantively the same as round N-1 (providers just agree with no new points), you may stop early. This is optional - completing all requested rounds is also acceptable.
 
-**Prompt construction:** Build the prompt as a temp file (see Step 3), then pipe it: `cat "$SC_TMPDIR/prompt.txt" | uv run ...`. Never store the prompt in a shell variable — file contents and special characters will break expansion.
+**Prompt construction:** Build the prompt as a temp file (see Step 3), then pass it via `--input-file "$SC_TMPDIR/prompt.txt"`. Never store the prompt in a shell variable — file contents and special characters will break expansion.
 
 **Important:** Keep the entire `uv run` command on one line. The core `any-llm-sdk` is resolved from `pyproject.toml`; provider SDKs are added via `--with` flags from the `--list-sdks` output. Each `--with` must be a separate argument.
 
