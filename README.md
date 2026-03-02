@@ -6,29 +6,16 @@
 
 **Works with both [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenCode](https://opencode.ai).**
 
-## How It Works
+## System Requirements
 
-```mermaid
-flowchart TD
-    A["/implement add user authentication"] --> B["Phase 0: Rules injected from .claude/rules/*.md"]
-    B --> C["Phase 1-2: Agent implements following injected rules"]
-    C --> D["Phase 3: Linters run (ruff, biome, golangci-lint)"]
-    D --> E["Validators run (security, python-style, etc.)"]
-    E --> F{Pass?}
-    F -->|No| G["Fix violations"]
-    G --> D
-    F -->|Yes| H["Phase 4: Complete with validation report"]
-```
-
-**Key principle:** Validators are authoritative, not rules files. If there's a conflict, the validator wins.
-
-## Prerequisites
-
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenCode](https://opencode.ai) installed
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenCode](https://opencode.ai)
 - Git
-- [uv](https://docs.astral.sh/uv/) (for Python-based validators and star-chamber)
+- [uv](https://docs.astral.sh/uv/) (for `/star-chamber`)
+- Language toolchains for deterministic linting: Go (`golangci-lint`), TypeScript (`biome`, `tsc`), Python (`ruff`, `ty`/`mypy`)
 
-## Quick Start: Claude Code
+## Quick Start
+
+### Claude Code
 
 1. Add the marketplace:
    ```text
@@ -47,32 +34,30 @@ flowchart TD
    ```
    Third-party marketplaces have auto-update **disabled** by default. Enabling it ensures you receive new versions automatically when Claude Code starts.
 
-4. Set up your project:
+4. Run `/validate` in any project — immediate value, no setup needed. Example (after modifying Go files):
    ```text
-   /setup-project
+   > /validate
+
+   # Validation Results
+
+   | Validator | Result | HARD | SHOULD | WARN |
+   |-----------|--------|------|--------|------|
+   | security | ✓ pass | 0 | 0 | 0 |
+   | state-machine | ✓ pass | 0 | 0 | 0 |
+   | go-effective | ✗ fail | 1 | 0 | 0 |
+
+   ## HARD violations (must fix)
+   - **go-effective** `auth.go:45` — Exported function `HandleLogin` missing doc comment
+
+   ## Verdict
+   **FAIL** — 1 HARD violation must be fixed before commit
    ```
+
+Optionally run `/setup-project` to configure project-specific rules — see [Configure Project Rules](#configure-project-rules-setup-project).
 
 > **Note:** Skills are shown as `/star-chamber (pragma)` in the CLI autocomplete. The short form `/star-chamber` is the easiest way to invoke them. The fully-qualified form `/pragma:star-chamber` also works.
 
-## Updating
-
-If you enabled auto-update in the Quick Start, new versions are fetched automatically when Claude Code starts and you'll be notified to restart your session.
-
-To update manually, both steps are required in this order:
-
-1. Update the marketplace (fetches the latest plugin metadata):
-   ```text
-   /plugin marketplace update agent-pragma
-   ```
-
-2. Update the plugin (installs the new version):
-   ```text
-   /plugin update pragma
-   ```
-
-To check your current version, run `/plugin` and look under the **Installed** tab.
-
-## Quick Start: OpenCode
+### OpenCode
 
 ```bash
 # Clone the repo
@@ -82,11 +67,11 @@ cd agent-pragma
 # Install globally (skills, agents, and commands available in all sessions)
 make install AGENT=opencode
 
-# Then in any project:
-/setup-project
+# Run /validate in any project — works immediately
+/validate
 ```
 
-This symlinks skills and generates agents and commands into `~/.config/opencode/`. Then run `/setup-project` in any project to detect languages, create the appropriate rule files, and generate `opencode.json` so OpenCode auto-loads the rules.
+This symlinks skills and generates agents and commands into `~/.config/opencode/`. Run `/validate` in any project — works immediately with built-in rules. For project-specific rules, see [Configure Project Rules](#configure-project-rules-setup-project).
 
 To install into a specific project instead of globally:
 
@@ -94,63 +79,42 @@ To install into a specific project instead of globally:
 make install AGENT=opencode PROJECT=/path/to/your/project
 ```
 
-### Example: Using /implement
+## What Works Immediately
 
-```bash
-> /implement add input validation to the login form
+Every skill works after install with zero additional setup (`/star-chamber` requires API keys — see [Environment Variables](#environment-variables)).
 
-[Phase 0] Injecting rules from:
-  - .claude/rules/universal.md
-  - .claude/rules/typescript.md (scoped to frontend/**)
-
-[Phase 1-2] Implementing...
-  Created: frontend/src/utils/validation.ts
-  Modified: frontend/src/components/LoginForm.tsx
-
-[Phase 3] Validating...
-  biome: passed
-  tsc: passed
-  security: passed
-  typescript-style: passed
-
-[Phase 4] Complete
-  Files changed: 2
-  Validators run: 4
-  Issues: 0
+```mermaid
+flowchart TD
+    A["/validate"] --> B["Detect changed file types"]
+    B --> C["Dispatch applicable validators"]
+    C --> D["security + state-machine + language validators"]
+    D --> E["Aggregate results"]
+    E --> F["Severity-graded report"]
 ```
 
-## Skills
-
-### Universal Skills
-
-| Skill | What it does | Why it matters |
-|-------|--------------|----------------|
-| `/setup-project` | Detects languages, creates `.claude/rules/` files, configures validators | One command to configure any project |
-| `/implement <task>` | Implements with automatic validation loop | Catches issues before you review the code |
-| `/review` | Validates current changes against all rules | Quick check before committing |
+`/review` uses the same validator dispatch rules.
 
 ### Validators
 
-Validators are semantic checks that run after linters pass. They enforce language-specific best practices.
+`/validate` orchestrates all applicable validators based on changed file types:
 
 | Skill | Language | What it checks |
 |-------|----------|----------------|
-| `/validate` | All | Orchestrator - runs all applicable validators |
-| `/security` | All | Secrets, injection vulnerabilities, path traversal, auth gaps |
-| `/python-style` | Python | Google docstrings, type hints, exception chaining, layered architecture |
-| `/typescript-style` | TypeScript | Strict mode, React patterns, proper hooks, state management |
-| `/go-effective` | Go | Effective Go rules - naming, error handling, interface design |
-| `/go-proverbs` | Go | Go Proverbs - idiomatic patterns, concurrency, "clear is better than clever" |
+| `/security` | All | Secrets, injection, path traversal, auth gaps |
+| `/state-machine` | All | State transitions, terminal state correctness, cleanup enforcement |
+| `/go-effective` | Go | Effective Go — naming, error handling, interface design |
+| `/go-proverbs` | Go | Go Proverbs — idiomatic patterns, concurrency |
+| `/python-style` | Python | Google docstrings, type hints, exception chaining, architecture |
+| `/typescript-style` | TypeScript | Strict mode, React patterns, hooks, state management |
 
-### Advisory Skills
-
-Advisory skills provide feedback but don't block completion.
+### Code Review
 
 | Skill | What it does |
 |-------|--------------|
-| `/star-chamber` | Fans out code review to multiple LLMs (OpenAI, Anthropic, Gemini) and aggregates consensus feedback |
+| `/review` | Runs security, state-machine + language-specific validators on current changes. Injects project rules if configured. |
+| `/star-chamber` | Multi-LLM consensus review — prompts for provider setup on first run (requires API keys) |
 
-## Validator Severity Levels
+### Severity Levels
 
 | Level | Meaning | What happens |
 |-------|---------|--------------|
@@ -158,17 +122,17 @@ Advisory skills provide feedback but don't block completion.
 | **SHOULD** | Fix or justify | Requires explicit justification to proceed |
 | **WARN** | Advisory | Noted in output but doesn't block |
 
-## Environment Variables
+## Configure Project Rules (/setup-project)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `STAR_CHAMBER_CONFIG` | No | Custom path to star-chamber config (default: `~/.config/star-chamber/providers.json`) |
-| `ANY_LLM_KEY` | For `/star-chamber` | Platform key from [any-llm.ai](https://any-llm.ai) |
-| `OPENAI_API_KEY` | For `/star-chamber` | OpenAI API key (if not using any-llm.ai) |
-| `ANTHROPIC_API_KEY` | For `/star-chamber` | Anthropic API key (if not using any-llm.ai) |
-| `GEMINI_API_KEY` | For `/star-chamber` | Google Gemini API key (if not using any-llm.ai) |
+For project-specific rules, monorepo path scoping, and team consistency, run:
 
-## Monorepo Support
+```text
+/setup-project
+```
+
+This detects languages, creates project rule files, and configures your agent.
+
+### Monorepo Support
 
 `/setup-project` detects languages at root AND in subdirectories, creating path-scoped rule files:
 
@@ -191,6 +155,87 @@ myproject/
 Language-specific rules use `paths:` frontmatter to scope them to matching files. When you edit `backend/app/main.py`, both `python.md` (scoped to `backend/**/*.py`) and `universal.md` are applied. `CLAUDE.local.md` at the project root is auto-loaded as per-user supplements.
 
 Both agents load rules from the same `.claude/rules/*.md` files — Claude Code natively, OpenCode via the `instructions` glob in `opencode.json`. This keeps a single source of truth for project rules.
+
+### Version Control
+
+**Optionally commit** the generated `.claude/rules/` files so other developers get the same rules without re-running `/setup-project`.
+
+`CLAUDE.local.md` is for per-user, per-machine rules and should be gitignored. If you create it manually, verify it is in your `.gitignore` to avoid committing personal rules.
+
+In git worktrees, use `@import` (a Claude Code directive that includes another CLAUDE.md file) in `CLAUDE.local.md` to reference a shared local rules file rather than duplicating it per worktree:
+
+```markdown
+@import ../shared-local-rules.md
+```
+
+## The Full Pipeline (/implement)
+
+When you want implementation with automatic validation. This example assumes `/setup-project` has been run to create project rule files — without them, validators still run using their built-in rulesets.
+
+```text
+> /implement add input validation to the login form
+
+[Phase 0] Injecting rules from:
+  - .claude/rules/universal.md
+  - .claude/rules/typescript.md (scoped to frontend/**)
+
+[Phase 1-2] Implementing...
+  Created: frontend/src/utils/validation.ts
+  Modified: frontend/src/components/LoginForm.tsx
+
+[Phase 3] Validating...
+  Linters: biome passed, tsc passed
+  security: passed
+  state-machine: passed
+  typescript-style: passed
+
+[Phase 4] Complete
+  Files changed: 2
+  Semantic validators run: 3
+  Issues: 0
+```
+
+```mermaid
+flowchart TD
+    A["/implement add user authentication"] --> B["Phase 0: Rules injected from project rules"]
+    B --> C["Phase 1-2: Agent implements following injected rules"]
+    C --> D["Phase 3: Linters run (ruff, biome, golangci-lint)"]
+    D --> E["Validators run (security, state-machine, language validators)"]
+    E --> F{Pass?}
+    F -->|No| G["Fix violations"]
+    G --> D
+    F -->|Yes| H["Phase 4: Complete with validation report"]
+```
+
+**Key principle:** Validators are authoritative, not rules files. If there's a conflict, the validator wins.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `STAR_CHAMBER_CONFIG` | No | Custom path to star-chamber config (default: `~/.config/star-chamber/providers.json`) |
+| `ANY_LLM_KEY` | For `/star-chamber` | Platform key from [any-llm.ai](https://any-llm.ai) |
+| `OPENAI_API_KEY` | For `/star-chamber` | OpenAI API key (if not using any-llm.ai) |
+| `ANTHROPIC_API_KEY` | For `/star-chamber` | Anthropic API key (if not using any-llm.ai) |
+| `GEMINI_API_KEY` | For `/star-chamber` | Google Gemini API key (if not using any-llm.ai) |
+
+## Updating
+
+If you enabled auto-update in the Quick Start, new versions are fetched automatically when Claude Code starts and you'll be notified to restart your session.
+
+To update manually, both steps are required in this order:
+
+1. Update the marketplace (fetches the latest plugin metadata):
+   ```text
+   /plugin marketplace update agent-pragma
+   ```
+
+2. Update the plugin (installs the new version):
+   ```text
+   /plugin update pragma
+   ```
+
+To check your current version, run `/plugin` and look under the **Installed** tab.
 
 ## Directory Structure
 
@@ -217,21 +262,9 @@ agent-pragma/
 
 Both Claude Code and OpenCode share the same skills from `plugins/pragma/skills/` and rule files from `plugins/pragma/claude-md/`. OpenCode accesses skills via symlinks created by `make install AGENT=opencode`.
 
-## Version Control
-
-**Optionally commit** the generated `.claude/rules/` files so other developers get the same rules without re-running `/setup-project`.
-
-`CLAUDE.local.md` is for per-user, per-machine rules and should be gitignored. If you create it manually, verify it is in your `.gitignore` to avoid committing personal rules.
-
-In git worktrees, use `@import` (a Claude Code directive that includes another CLAUDE.md file) in `CLAUDE.local.md` to reference a shared local rules file rather than duplicating it per worktree:
-
-```markdown
-@import ../shared-local-rules.md
-```
-
 ## Legacy Installation (Deprecated)
 
-The previous `make install` + `$CLAUDE_PRAGMA_PATH` approach for Claude Code is deprecated. Use the plugin marketplace instead — it handles updates automatically when auto-update is enabled (see [Quick Start: Claude Code](#quick-start-claude-code)). If migrating, remove the old symlinks and env var:
+The previous `make install` + `$CLAUDE_PRAGMA_PATH` approach for Claude Code is deprecated. Use the plugin marketplace instead — it handles updates automatically when auto-update is enabled (see [Quick Start](#claude-code)). If migrating, remove the old symlinks and env var:
 
 ```bash
 make uninstall

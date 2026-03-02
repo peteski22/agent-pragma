@@ -93,6 +93,7 @@ Use the Task tool to spawn validators in parallel based on what changed:
 
 **Always run:**
 - `security`
+- `state-machine`
 
 **If Go files changed (.go):**
 - `go-effective`
@@ -125,6 +126,9 @@ Collect all results.
 
 ### Security Validation
 ✓ passed (no HARD, no unexplained SHOULD)
+
+### State Machine Validation
+✓ passed (no HARD, no SHOULD)
 
 ### Go Effective Validation
 ✗ FAILED (1 HARD, 1 SHOULD unexplained)

@@ -4,86 +4,34 @@ This document explains the design decisions behind agent-pragma.
 
 ## User Flow: End-to-End
 
-This diagram shows the complete workflow from project setup through implementation and review.
+This diagram shows how all validation skills share the same validators. Skills work immediately with built-in rules; `/setup-project` adds project-specific rules that enhance `/implement` and `/review`.
 
 ```mermaid
 flowchart TB
-    subgraph Setup["One-Time Setup"]
-        S1["Clone agent-pragma repo"]
-        S2["Install pragma plugin"]
-        S3["Run /setup-project"]
-        S1 --> S2 --> S3
-        S3 --> S3a["Detects: backend/ (Python)<br/>frontend/ (TypeScript)<br/>services/go/ (Go)"]
-        S3a --> S3b["Creates .claude/rules/*.md files"]
-        S3b --> S3c["Verifies plugin skills"]
+    subgraph Standalone["Works Immediately (no setup)"]
+        V["/validate"] --> Validators
+        R["/review"] --> Validators
+        SC["/star-chamber"] --> SCR["Multi-LLM fan-out"]
+        SCR --> SCS["Consensus report"]
     end
 
-    subgraph Implement["Developer runs: /implement 'Add user authentication'"]
-        direction TB
+    Validators["Dispatch validators by file type"] --> Report["Severity-graded report"]
 
-        subgraph P0["Phase 0: Rule Injection"]
-            P0a["Identify target dirs:<br/>backend/, frontend/"]
-            P0b["Walk up, collect rules"]
-            P0c["Read & apply:<br/>• .claude/rules/python.md<br/>• .claude/rules/typescript.md<br/>• .claude/rules/universal.md"]
-            P0a --> P0b --> P0c
-        end
-
-        subgraph P12["Phase 1-2: Understand & Implement"]
-            P12a["Clarify requirements"]
-            P12b["Write code following<br/>injected rules"]
-            P12c["Files created:<br/>• backend/app/services/auth.py<br/>• backend/app/api/routes/auth.py<br/>• frontend/src/hooks/useAuth.ts"]
-            P12a --> P12b --> P12c
-        end
-
-        subgraph P3["Phase 3: Validate"]
-            P3a["Run linters:<br/>ruff + ty | biome + tsc"]
-            P3b{Linters pass?}
-            P3c["Fix lint errors"]
-            P3d["Spawn semantic validators"]
-
-            P3a --> P3b
-            P3b -->|No| P3c --> P3a
-            P3b -->|Yes| P3d
-
-            subgraph Validators["Parallel Validators"]
-                V1["security"]
-                V2["python-style"]
-                V3["typescript-style"]
-            end
-
-            P3d --> Validators
-            Validators --> P3e["Aggregate results"]
-            P3e --> P3f{All pass?}
-            P3f -->|No| P3g["Fix violations"]
-            P3g --> P3a
-        end
-
-        subgraph P4["Phase 4: Complete"]
-            P4a["Generate report"]
-        end
-
-        P0 --> P12 --> P3
-        P3f -->|Yes| P4
+    subgraph Pipeline["Full Pipeline (/implement)"]
+        I["/implement task"] --> P0["Phase 0: Inject project rules"]
+        P0 --> P12["Phase 1-2: Implement"]
+        P12 --> P3["Phase 3: Validate"]
     end
 
-    subgraph Review["Developer runs: /review"]
-        R1["Get changed files"]
-        R2["Inject rules (Step 2)"]
-        R3["Run linters"]
-        R4["Run validators"]
-        R5["Generate report"]
-        R1 --> R2 --> R3 --> R4 --> R5
-    end
+    P3 --> Validators
+    Report --> P4["Phase 4: Aggregate + format report"]
 
-    subgraph Output["Final Output"]
-        O1["JSON (machine-readable)"]
-        O2["Report (human-readable)"]
-    end
-
-    Setup --> Implement
-    Implement --> Review
-    Review --> Output
+    S["/setup-project"] --> SR["Creates project rule files (.claude/rules/*.md)"]
+    SR -.->|"enhances"| P0
+    SR -.->|"enhances"| R
 ```
+
+> **Note:** `/star-chamber` is an advisory skill — it fans out to multiple LLMs for consensus feedback, not through the shared validator pipeline.
 
 ## Output Examples
 
@@ -110,6 +58,7 @@ After `/implement` or `/review`, you get both formats:
 | Validator        | Status | Hard | Should | Warn |
 |------------------|--------|------|--------|------|
 | security         | ✓ Pass | 0    | 0      | 1    |
+| state-machine    | ✓ Pass | 0    | 0      | 0    |
 | python-style     | ✓ Pass | 0    | 0      | 0    |
 | typescript-style | ✓ Pass | 0    | 0      | 0    |
 
@@ -139,6 +88,7 @@ Ready for /review or commit.
     "pass": true,
     "validators": [
       {"name": "security", "pass": true, "hard": 0, "should": 0, "warn": 1},
+      {"name": "state-machine", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "python-style", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "typescript-style", "pass": true, "hard": 0, "should": 0, "warn": 0}
     ],
@@ -158,19 +108,24 @@ Ready for /review or commit.
 
 ## The Problem
 
-CLAUDE.md rules are **guidance** - they can be ignored or forgotten by the LLM. We needed:
+Project rule files (`.claude/rules/*.md`) are **guidance** — they can be ignored or forgotten by the LLM. We needed:
 
 1. Rules that are **mechanically injected**, not hoped-for
 2. Validation that **verifies compliance**, not trusts it
 3. A system that works for **monorepos with multiple languages**
+4. A tool that delivers value **immediately**, without requiring setup before first use
 
 ## Core Principles
 
-### 1. Validators are authoritative, not CLAUDE.md
+### 0. Zero-config by default
 
-CLAUDE.md provides guidance. Validators **enforce** rules.
+Validators work standalone with built-in rules — no project rules or `/setup-project` required. Each validator ships with its own rule definitions (the skill prompt templates and `contract.json` in the plugin's `skills/` directory). Project rule files (`.claude/rules/*.md`) are an enhancement for team consistency and monorepo path scoping, not a prerequisite.
 
-If there's a conflict between what CLAUDE.md says and what a validator checks, the validator wins. This removes ambiguity.
+### 1. Validators are authoritative, not project rules
+
+Project rule files (`.claude/rules/*.md`) provide guidance. Validators **enforce** rules.
+
+If there's a conflict between what a project rule file says and what a validator checks, the validator wins. This removes ambiguity.
 
 ### 2. Rules are injected, not remembered
 
@@ -231,6 +186,7 @@ flowchart TB
 
         subgraph SemVal["Semantic Validators"]
             LintPass -->|Yes| SecVal["security<br/>(all files)"]
+            LintPass -->|Yes| StmVal["state-machine<br/>(all files)"]
 
             LintPass -->|Yes, .py| PyStyle["python-style"]
             LintPass -->|Yes, .ts/.tsx| TSStyle["typescript-style"]
@@ -238,7 +194,7 @@ flowchart TB
             LintPass -->|Yes, .go| GoProv["go-proverbs"]
         end
 
-        SecVal & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
+        SecVal & StmVal & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
         Agg --> ValPass{All pass?}
         ValPass -->|No| FixViol[Fix violations]
         FixViol --> PyLint & TSLint & GoLint
@@ -292,8 +248,9 @@ flowchart TD
             Lint --> LintFail
         end
 
-        subgraph Semantic["Semantic Validators (by language)"]
+        subgraph Semantic["Semantic Validators"]
             SecVal[security - all languages]
+            StmVal[state-machine - all languages]
             PyVal[python-style - Python]
             TSVal[typescript-style - TypeScript]
             GoEff[go-effective - Go]
@@ -306,8 +263,8 @@ flowchart TD
 
         LintFail -->|No| FixLint[Fix lint errors]
         FixLint --> Lint
-        LintFail -->|Yes| SecVal & PyVal & TSVal & GoEff & GoProv
-        SecVal & PyVal & TSVal & GoEff & GoProv --> Agg
+        LintFail -->|Yes| SecVal & StmVal & PyVal & TSVal & GoEff & GoProv
+        SecVal & StmVal & PyVal & TSVal & GoEff & GoProv --> Agg
         Agg --> Fix
         Fix --> ReVal
         ReVal -->|Yes| Lint
@@ -349,19 +306,20 @@ flowchart TD
 
 ## Validator Contracts
 
-Each validator has a `contract.json` defining its scope:
+Each validator has a `contract.json` defining its scope and assumptions.
 
 | Validator | Language | Scope | Excludes | Assumes |
 |-----------|----------|-------|----------|---------|
+| **security** | All | Secrets, Injection, Path traversal, Auth gaps | Code style, Language idioms, Performance | No tool deps (pipeline-gated) |
+| **state-machine** | All | State transitions, Terminal state correctness, Cleanup enforcement | Code style, Performance | No tool deps (pipeline-gated) |
 | **go-effective** | Go | Naming, Error handling, Interface design, Control flow | Security, Go Proverbs, Formatting | gofmt, golangci-lint |
 | **go-proverbs** | Go | Idiomatic Go philosophy, Concurrency patterns, Abstraction | Security, Effective Go details, Formatting | golangci-lint |
 | **python-style** | Python | Google docstrings, Type hints, Error handling, Layered architecture | Security, Performance | ruff, ty/mypy, pre-commit |
 | **typescript-style** | TypeScript | Strict mode, React patterns, Hooks usage, State management | Security, Performance | biome, pre-commit |
-| **security** | All | Secrets, Injection, Path traversal, Auth gaps | Code style, Language idioms, Performance | (none) |
 
 ### Validator Dependency Chain
 
-Semantic validators assume deterministic linters have passed. This is enforced by Phase 3 ordering.
+Language-specific semantic validators require their linters to have passed first (tool dependency). Cross-language validators have no tool dependencies but are pipeline-gated — they run after linters pass as a convention for signal quality.
 
 ```mermaid
 flowchart LR
@@ -379,6 +337,7 @@ flowchart LR
         goeff["go-effective"]
         goprov["go-proverbs"]
         sec["security"]
+        stm["state-machine"]
     end
 
     ruff --> pystyle
@@ -388,18 +347,24 @@ flowchart LR
     golangci --> goeff
     golangci --> goprov
 
-    sec -.->|"no dependencies"| Det
+    sec ~~~ Det
+    stm ~~~ Det
 ```
+
+> **Note:** security and state-machine have no linter tool dependencies — they run on any file type without requiring language-specific linters. In the pipeline, they still run after the lint-pass gate as a convention for signal quality.
 
 **HARD vs SHOULD by validator:**
 
 | Validator | HARD Rules | SHOULD Rules |
 |-----------|------------|--------------|
+| **security** | Secrets, Injection, Path traversal, Auth gaps | Insecure configurations |
+| **state-machine** | Invalid transitions, Unreachable states | Missing cleanup on terminal states |
 | **go-effective** | Doc comments, Error return position, No pointer-to-interface | Interface size, Early returns, Parameter count |
 | **go-proverbs** | Share memory by communicating, Errors are values, Handle errors gracefully | Interface size, Zero value, Clear vs clever |
 | **python-style** | Exception chaining with `from e`, No bare `except:` | Google docstrings, Modern type hints (`str \| None`) |
 | **typescript-style** | Strict mode enabled, Functional components only | Proper hook dependencies, TanStack Query for server state |
-| **security** | Secrets, Injection, Path traversal, Auth gaps | Insecure configurations |
+
+Cross-language validators (security, state-machine) check structural patterns across all languages. Language-specific validators check language idioms. Where both could apply, the cross-language validator owns the structural check and the language validator owns the idiom check.
 
 This prevents:
 - Validators reporting on the same thing (noise)
@@ -473,6 +438,13 @@ Phase 4 combines all validator results into a single output:
         "hard_count": 0,
         "should_count": 0,
         "warning_count": 1
+      },
+      {
+        "name": "state-machine",
+        "pass": true,
+        "hard_count": 0,
+        "should_count": 0,
+        "warning_count": 0
       },
       {
         "name": "python-style",
@@ -561,11 +533,12 @@ For `/implement` and `/review`, rule injection is mechanical and explicit — th
 
 | Validator | Language | Status |
 |-----------|----------|--------|
+| security | All | ✅ Done |
+| state-machine | All | ✅ Done |
 | go-effective | Go | ✅ Done |
 | go-proverbs | Go | ✅ Done |
 | python-style | Python | ✅ Done |
 | typescript-style | TypeScript | ✅ Done |
-| security | All | ✅ Done |
 
 ### Security: Dual Entrypoint
 
