@@ -499,6 +499,26 @@ class TestInputFile:
         output = json.loads(mock_stdout.getvalue())
         assert "Input file not found" in output["error"]
 
+    def test_input_file_directory_exits_with_error(self, tmp_path):
+        """Directory path should produce error JSON and exit 1, not a traceback."""
+        import io
+
+        from llm_council import main
+
+        config_file = self._make_config(tmp_path)
+
+        with (
+            patch("sys.argv", ["llm_council.py", "--input-file", str(tmp_path)]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+            patch.dict(os.environ, {"STAR_CHAMBER_CONFIG": str(config_file)}, clear=False),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            main()
+
+        assert exc_info.value.code == 1
+        output = json.loads(mock_stdout.getvalue())
+        assert "Failed to read input file" in output["error"]
+
     def test_stdin_still_works_without_input_file(self, tmp_path):
         """Stdin should be used when --input-file is omitted (backwards compat)."""
         import io

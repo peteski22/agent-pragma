@@ -554,12 +554,21 @@ def main() -> None:
     # Read prompt from file or stdin.
     if args.input_file:
         input_path = Path(args.input_file)
-        if not input_path.exists():
+        try:
+            prompt = input_path.read_text()
+        except FileNotFoundError:
             print(
                 json.dumps({"error": f"Input file not found: {args.input_file}"}),
             )
             sys.exit(1)
-        prompt = input_path.read_text()
+        except (OSError, UnicodeDecodeError) as exc:
+            print(
+                json.dumps({
+                    "error": f"Failed to read input file: {args.input_file}",
+                    "details": sanitize_error(str(exc)),
+                }),
+            )
+            sys.exit(1)
     else:
         prompt = sys.stdin.read()
 
