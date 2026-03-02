@@ -225,9 +225,11 @@ If no project rules directory exists, skip rule injection — star-chamber will 
 
 The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules at the platform level — the skill does not need to parse `opencode.json` directly.
 
+For parallel (non-debate) mode, create `SC_TMPDIR` here so rules can be persisted for Step 3: `SC_TMPDIR="$(mktemp -d)"`. In debate mode, `SC_TMPDIR` is created in Step 4 — set it there instead.
+
 ```bash
 # Re-derive the review target file list (each Bash invocation is isolated).
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"
+STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="$(mktemp -d)"
 RULES_FILE="$SC_TMPDIR/rules.txt"
 : > "$RULES_FILE"
 
@@ -295,7 +297,7 @@ Build a structured prompt for Star-Chamber. Use the example template pattern bel
 
 **Prompt construction:** Write the prompt to a temp file using `cat >` with a single-quoted heredoc for the static template, then append dynamic content (file contents, rules) with `cat >>`. Single-quoted heredocs (`<< 'EOF'`) prevent shell expansion, which is what you want for the template — but it also means `$VARIABLE` references inside the heredoc are passed as literal text, not expanded. Append dynamic content separately.
 
-For parallel (non-debate) mode, create a temporary directory for the prompt file: `SC_TMPDIR="$(mktemp -d)"`. In debate mode, `SC_TMPDIR` is created in Step 4.
+`SC_TMPDIR` was created in Step 2 (parallel mode) or Step 4 (debate mode). Re-set it at the top of each bash block since variables do not persist between invocations.
 
 Example:
 ```bash
