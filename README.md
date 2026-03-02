@@ -47,9 +47,6 @@
    ### Security Validation
    ✓ passed (no HARD, no SHOULD)
 
-   ### Error Handling Validation
-   ✓ passed (no HARD, no SHOULD)
-
    ### State Machine Validation
    ✓ passed (no HARD, no SHOULD)
 
@@ -93,13 +90,13 @@ make install AGENT=opencode PROJECT=/path/to/your/project
 
 ## What Works Immediately
 
-Every skill works after install with zero additional setup.
+Every skill works after install with zero additional setup (`/star-chamber` requires API keys — see [Environment Variables](#environment-variables)).
 
 ```mermaid
 flowchart TD
     A["/validate"] --> B["Detect changed file types"]
     B --> C["Dispatch applicable validators"]
-    C --> D["security + language validators"]
+    C --> D["security + state-machine + language validators"]
     D --> E["Aggregate results"]
     E --> F["Severity-graded report"]
 ```
@@ -110,7 +107,6 @@ flowchart TD
 |-------|----------|----------------|
 | `/validate` | All | Orchestrator — runs all applicable validators |
 | `/security` | All | Secrets, injection, path traversal, auth gaps |
-| `/error-handling` | All | Swallowed errors, empty catches, silent fallbacks |
 | `/go-effective` | Go | Effective Go — naming, error handling, interface design |
 | `/go-proverbs` | Go | Go Proverbs — idiomatic patterns, concurrency |
 | `/python-style` | Python | Google docstrings, type hints, exception chaining, architecture |
@@ -121,7 +117,7 @@ flowchart TD
 
 | Skill | What it does |
 |-------|--------------|
-| `/review` | Validates current changes against all validators (+ project rules if configured) |
+| `/review` | Validates current changes against security, state-machine + language-specific validators (+ project rules if configured) |
 | `/star-chamber` | Multi-LLM consensus review — configures itself on first run |
 
 ### Severity Levels
@@ -194,16 +190,14 @@ When you want implementation with automatic validation:
   Modified: frontend/src/components/LoginForm.tsx
 
 [Phase 3] Validating...
-  biome: passed
-  tsc: passed
+  Linters: biome passed, tsc passed
   security: passed
-  error-handling: passed
   state-machine: passed
   typescript-style: passed
 
 [Phase 4] Complete
   Files changed: 2
-  Validators run: 6
+  Validators run: 3
   Issues: 0
 ```
 
@@ -212,7 +206,7 @@ flowchart TD
     A["/implement add user authentication"] --> B["Phase 0: Rules injected from project rules"]
     B --> C["Phase 1-2: Agent implements following injected rules"]
     C --> D["Phase 3: Linters run (ruff, biome, golangci-lint)"]
-    D --> E["Validators run (security, error-handling, language validators)"]
+    D --> E["Validators run (security, state-machine, language validators)"]
     E --> F{Pass?}
     F -->|No| G["Fix violations"]
     G --> D

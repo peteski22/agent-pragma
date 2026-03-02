@@ -58,7 +58,6 @@ After `/implement` or `/review`, you get both formats:
 | Validator        | Status | Hard | Should | Warn |
 |------------------|--------|------|--------|------|
 | security         | ✓ Pass | 0    | 0      | 1    |
-| error-handling   | ✓ Pass | 0    | 0      | 0    |
 | state-machine    | ✓ Pass | 0    | 0      | 0    |
 | python-style     | ✓ Pass | 0    | 0      | 0    |
 | typescript-style | ✓ Pass | 0    | 0      | 0    |
@@ -89,7 +88,6 @@ Ready for /review or commit.
     "pass": true,
     "validators": [
       {"name": "security", "pass": true, "hard": 0, "should": 0, "warn": 1},
-      {"name": "error-handling", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "state-machine", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "python-style", "pass": true, "hard": 0, "should": 0, "warn": 0},
       {"name": "typescript-style", "pass": true, "hard": 0, "should": 0, "warn": 0}
@@ -188,7 +186,6 @@ flowchart TB
 
         subgraph SemVal["Semantic Validators"]
             LintPass -->|Yes| SecVal["security<br/>(all files)"]
-            LintPass -->|Yes| ErrVal["error-handling<br/>(all files)"]
             LintPass -->|Yes| StmVal["state-machine<br/>(all files)"]
 
             LintPass -->|Yes, .py| PyStyle["python-style"]
@@ -197,7 +194,7 @@ flowchart TB
             LintPass -->|Yes, .go| GoProv["go-proverbs"]
         end
 
-        SecVal & ErrVal & StmVal & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
+        SecVal & StmVal & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
         Agg --> ValPass{All pass?}
         ValPass -->|No| FixViol[Fix violations]
         FixViol --> PyLint & TSLint & GoLint
@@ -253,7 +250,6 @@ flowchart TD
 
         subgraph Semantic["Semantic Validators"]
             SecVal[security - all languages]
-            ErrVal[error-handling - all languages]
             StmVal[state-machine - all languages]
             PyVal[python-style - Python]
             TSVal[typescript-style - TypeScript]
@@ -267,8 +263,8 @@ flowchart TD
 
         LintFail -->|No| FixLint[Fix lint errors]
         FixLint --> Lint
-        LintFail -->|Yes| SecVal & ErrVal & StmVal & PyVal & TSVal & GoEff & GoProv
-        SecVal & ErrVal & StmVal & PyVal & TSVal & GoEff & GoProv --> Agg
+        LintFail -->|Yes| SecVal & StmVal & PyVal & TSVal & GoEff & GoProv
+        SecVal & StmVal & PyVal & TSVal & GoEff & GoProv --> Agg
         Agg --> Fix
         Fix --> ReVal
         ReVal -->|Yes| Lint
@@ -315,7 +311,6 @@ Each validator has a `contract.json` defining its scope and assumptions.
 | Validator | Language | Scope | Excludes | Assumes |
 |-----------|----------|-------|----------|---------|
 | **security** | All | Secrets, Injection, Path traversal, Auth gaps | Code style, Language idioms, Performance | No tool deps (pipeline-gated) |
-| **error-handling** | All | Swallowed errors, Ignored return values, Silent fallbacks, Overly broad catches | Error message style, Security implications | No tool deps (pipeline-gated) |
 | **state-machine** | All | State transitions, Terminal state correctness, Cleanup enforcement | Code style, Performance | No tool deps (pipeline-gated) |
 | **go-effective** | Go | Naming, Error handling, Interface design, Control flow | Security, Go Proverbs, Formatting | gofmt, golangci-lint |
 | **go-proverbs** | Go | Idiomatic Go philosophy, Concurrency patterns, Abstraction | Security, Effective Go details, Formatting | golangci-lint |
@@ -342,7 +337,6 @@ flowchart LR
         goeff["go-effective"]
         goprov["go-proverbs"]
         sec["security"]
-        errh["error-handling"]
         stm["state-machine"]
     end
 
@@ -354,25 +348,23 @@ flowchart LR
     golangci --> goprov
 
     sec ~~~ Det
-    errh ~~~ Det
     stm ~~~ Det
 ```
 
-> **Note:** security, error-handling, and state-machine have no linter tool dependencies — they run on any file type without requiring language-specific linters. In the pipeline, they still run after the lint-pass gate as a convention for signal quality.
+> **Note:** security and state-machine have no linter tool dependencies — they run on any file type without requiring language-specific linters. In the pipeline, they still run after the lint-pass gate as a convention for signal quality.
 
 **HARD vs SHOULD by validator:**
 
 | Validator | HARD Rules | SHOULD Rules |
 |-----------|------------|--------------|
 | **security** | Secrets, Injection, Path traversal, Auth gaps | Insecure configurations |
-| **error-handling** | Empty catch/except, Ignored error returns, Broad catch without re-raise | Silent fallbacks, Re-raise without context |
 | **state-machine** | Invalid transitions, Unreachable states | Missing cleanup on terminal states |
 | **go-effective** | Doc comments, Error return position, No pointer-to-interface | Interface size, Early returns, Parameter count |
 | **go-proverbs** | Share memory by communicating, Errors are values, Handle errors gracefully | Interface size, Zero value, Clear vs clever |
 | **python-style** | Exception chaining with `from e`, No bare `except:` | Google docstrings, Modern type hints (`str \| None`) |
 | **typescript-style** | Strict mode enabled, Functional components only | Proper hook dependencies, TanStack Query for server state |
 
-Cross-language validators (security, error-handling, state-machine) check structural patterns across all languages. Language-specific validators check language idioms. For example, error-handling flags empty catch blocks in any language; python-style flags bare `except:` (a Python-specific idiom). Where both could apply, the cross-language validator owns the structural check and the language validator owns the idiom check.
+Cross-language validators (security, state-machine) check structural patterns across all languages. Language-specific validators check language idioms. Where both could apply, the cross-language validator owns the structural check and the language validator owns the idiom check.
 
 This prevents:
 - Validators reporting on the same thing (noise)
@@ -446,13 +438,6 @@ Phase 4 combines all validator results into a single output:
         "hard_count": 0,
         "should_count": 0,
         "warning_count": 1
-      },
-      {
-        "name": "error-handling",
-        "pass": true,
-        "hard_count": 0,
-        "should_count": 0,
-        "warning_count": 0
       },
       {
         "name": "state-machine",
@@ -549,7 +534,6 @@ For `/implement` and `/review`, rule injection is mechanical and explicit — th
 | Validator | Language | Status |
 |-----------|----------|--------|
 | security | All | ✅ Done |
-| error-handling | All | ✅ Done |
 | state-machine | All | ✅ Done |
 | go-effective | Go | ✅ Done |
 | go-proverbs | Go | ✅ Done |
