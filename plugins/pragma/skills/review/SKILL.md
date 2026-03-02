@@ -127,6 +127,9 @@ Collect all results.
 ### Security Validation
 ✓ passed (no HARD, no unexplained SHOULD)
 
+### State Machine Validation
+✓ passed (no HARD, no SHOULD)
+
 ### Go Effective Validation
 ✗ FAILED (1 HARD, 1 SHOULD unexplained)
 

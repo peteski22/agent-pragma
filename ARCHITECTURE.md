@@ -4,7 +4,7 @@ This document explains the design decisions behind agent-pragma.
 
 ## User Flow: End-to-End
 
-This diagram shows how all skills share the same validators. Skills work immediately with built-in rules; `/setup-project` adds project-specific rules that enhance `/implement` and `/review`.
+This diagram shows how all validation skills share the same validators. Skills work immediately with built-in rules; `/setup-project` adds project-specific rules that enhance `/implement` and `/review`.
 
 ```mermaid
 flowchart TB
