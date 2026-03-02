@@ -10,8 +10,8 @@
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenCode](https://opencode.ai)
 - Git
-- [uv](https://docs.astral.sh/uv/) (for `/star-chamber` and Python-based validators)
-- Language-specific validators require their ecosystem tools: Go (`golangci-lint`), TypeScript (`biome`, `tsc`), Python (`ruff`, `ty`/`mypy`)
+- [uv](https://docs.astral.sh/uv/) (for `/star-chamber`)
+- Language toolchains for deterministic linting: Go (`golangci-lint`), TypeScript (`biome`, `tsc`), Python (`ruff`, `ty`/`mypy`)
 
 ## Quick Start
 
@@ -34,7 +34,7 @@
    ```
    Third-party marketplaces have auto-update **disabled** by default. Enabling it ensures you receive new versions automatically when Claude Code starts.
 
-4. Run `/validate` in any project — immediate value, no setup needed:
+4. Run `/validate` in any project — immediate value, no setup needed. Example (after modifying Go files):
    ```text
    > /validate
 
@@ -92,24 +92,27 @@ flowchart TD
     E --> F["Severity-graded report"]
 ```
 
+`/review` uses the same validator dispatch rules.
+
 ### Validators
+
+`/validate` orchestrates all applicable validators based on changed file types:
 
 | Skill | Language | What it checks |
 |-------|----------|----------------|
-| `/validate` | All | Orchestrator — runs all applicable validators |
 | `/security` | All | Secrets, injection, path traversal, auth gaps |
+| `/state-machine` | All | State transitions, terminal state correctness, cleanup enforcement |
 | `/go-effective` | Go | Effective Go — naming, error handling, interface design |
 | `/go-proverbs` | Go | Go Proverbs — idiomatic patterns, concurrency |
 | `/python-style` | Python | Google docstrings, type hints, exception chaining, architecture |
 | `/typescript-style` | TypeScript | Strict mode, React patterns, hooks, state management |
-| `/state-machine` | All | State transitions, terminal state correctness, cleanup enforcement |
 
 ### Code Review
 
 | Skill | What it does |
 |-------|--------------|
-| `/review` | Validates current changes against security, state-machine + language-specific validators (+ project rules if configured) |
-| `/star-chamber` | Multi-LLM consensus review — configures itself on first run |
+| `/review` | Runs security, state-machine + language-specific validators on current changes. Injects project rules if configured. |
+| `/star-chamber` | Multi-LLM consensus review — prompts for provider setup on first run (requires API keys) |
 
 ### Severity Levels
 
@@ -167,7 +170,7 @@ In git worktrees, use `@import` (a Claude Code directive that includes another C
 
 ## The Full Pipeline (/implement)
 
-When you want implementation with automatic validation:
+When you want implementation with automatic validation. This example assumes `/setup-project` has been run to create project rule files — without them, validators still run using their built-in rulesets.
 
 ```text
 > /implement add input validation to the login form
@@ -188,7 +191,7 @@ When you want implementation with automatic validation:
 
 [Phase 4] Complete
   Files changed: 2
-  Validators run: 3
+  Semantic validators run: 3
   Issues: 0
 ```
 
