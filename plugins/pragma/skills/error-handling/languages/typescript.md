@@ -31,5 +31,6 @@
 
 ### Floating promises
 - Pattern: calling an async function or a function returning a `Promise` without `await`, `.then()`, or `.catch()`.
-- Example: `deleteOldRecords()` where `deleteOldRecords` is async.
-- Why WARN: Unhandled rejections can crash the process or be silently lost. May be intentional for fire-and-forget operations, but should be explicitly marked (e.g., `void deleteOldRecords()`).
+- Example (violation): `deleteOldRecords()` where `deleteOldRecords` is async.
+- Example (acceptable): `void deleteOldRecords()` — explicitly marks fire-and-forget intent.
+- Why WARN: Unhandled rejections can crash the process or be silently lost. May be intentional for fire-and-forget operations, but should be explicitly marked with `void`.

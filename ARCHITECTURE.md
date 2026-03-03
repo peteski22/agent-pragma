@@ -199,7 +199,7 @@ flowchart TB
             LintPass -->|Yes, .go| GoProv["go-proverbs"]
         end
 
-        CrossLang & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
+        SecVal & StmVal & ErrVal & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
         Agg --> ValPass{All pass?}
         ValPass -->|No| FixViol[Fix violations]
         FixViol --> PyLint & TSLint & GoLint
@@ -271,8 +271,8 @@ flowchart TD
 
         LintFail -->|No| FixLint[Fix lint errors]
         FixLint --> Lint
-        LintFail -->|Yes| CrossLang2 & PyVal & TSVal & GoEff & GoProv
-        CrossLang2 & PyVal & TSVal & GoEff & GoProv --> Agg
+        LintFail -->|Yes| SecVal & StmVal & ErrVal & PyVal & TSVal & GoEff & GoProv
+        SecVal & StmVal & ErrVal & PyVal & TSVal & GoEff & GoProv --> Agg
         Agg --> Fix
         Fix --> ReVal
         ReVal -->|Yes| Lint

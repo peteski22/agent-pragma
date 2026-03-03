@@ -113,7 +113,7 @@ flowchart TD
 
 | Skill | What it does |
 |-------|--------------|
-| `/review` | Runs security, state-machine + language-specific validators on current changes. Injects project rules if configured. |
+| `/review` | Runs security, state-machine, error-handling + language-specific validators on current changes. Injects project rules if configured. |
 | `/star-chamber` | Multi-LLM consensus review — prompts for provider setup on first run (requires API keys) |
 
 ### Severity Levels

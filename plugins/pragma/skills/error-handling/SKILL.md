@@ -16,7 +16,7 @@ You are a focused error handling validator. Check recent code changes for incomp
 This validator checks ONLY:
 - Swallowed errors (empty catch/except blocks, ignored error returns)
 - Silent fallbacks (returning defaults without logging or propagation)
-- Overly broad catching (bare `except:`, `catch (Exception)`, untyped `catch`)
+- Overly broad catching (Python: bare `except:` / `except Exception:`, TypeScript: generic `catch (e)` / `catch {}`)
 - Ignored error returns (discarding error values, unchecked promises)
 
 This validator MUST NOT report on:
@@ -47,9 +47,11 @@ git diff --cached --diff-filter=ACMRT
 git diff --diff-filter=ACMRT
 ```
 
-Also get the file list:
+Also get the file list (same fallback order):
 ```bash
-git diff HEAD~1 --name-only --diff-filter=ACMRT
+git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || \
+git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || \
+git diff --name-only --diff-filter=ACMRT
 ```
 
 If more than 50 files changed, process in batches of 50. Note batch number in output.
@@ -166,7 +168,6 @@ If no error-handling-relevant changes are detected, output a clean pass:
     "hard_count": 0,
     "should_count": 0,
     "warning_count": 0
-  },
-  "note": "No error handling changes detected"
+  }
 }
 ```
