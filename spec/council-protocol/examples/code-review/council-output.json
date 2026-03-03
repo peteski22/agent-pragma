@@ -13,18 +13,16 @@
       "category": "correctness",
       "description": "SHA-256 is not suitable for password hashing. It is too fast and lacks salting, making it vulnerable to brute-force and rainbow table attacks. Project rules require bcrypt.",
       "suggestion": "Replace hashlib.sha256 with bcrypt.checkpw/bcrypt.hashpw."
-    }
-  ],
-  "majority_issues": [
+    },
     {
       "severity": "medium",
       "location": "backend/app/api/routes/auth.py:11",
       "category": "correctness",
       "description": "auth_service is referenced but never defined or imported in the routes module. This will cause a NameError at runtime.",
-      "suggestion": "Inject AuthService via Flask's application context or a factory pattern.",
-      "provider_count": 3
+      "suggestion": "Inject AuthService via Flask's application context or a factory pattern."
     }
   ],
+  "majority_issues": [],
   "individual_issues": {
     "openai": [
       {
@@ -61,8 +59,8 @@
   },
   "summary": {
     "total_issues": 5,
-    "consensus_count": 1,
-    "majority_count": 1,
+    "consensus_count": 2,
+    "majority_count": 0,
     "synthesis": "All three providers identified the SHA-256 password hashing as a critical security flaw and the undefined auth_service as a runtime bug. Individual observations covered token storage, return value consistency, and missing docstrings."
   }
 }

@@ -288,7 +288,9 @@ Issues from different providers are grouped when they refer to the same underlyi
 
 ### 9.2 Approach Grouping (Design Question)
 
-Recommendations from different providers are grouped when they recommend the same approach (by name match or semantic similarity).
+The approaches array includes all approaches mentioned by any provider — both recommended and discussed-but-rejected alternatives. An approach with `recommended_by: 0` was considered by one or more providers but not recommended by any.
+
+Approaches from different providers are grouped when they refer to the same approach (by name match or semantic similarity). The `recommended_by` count reflects how many providers selected that approach as their primary recommendation.
 
 ### 9.3 Classification Buckets
 
@@ -299,6 +301,8 @@ Issues/recommendations fall into mutually exclusive buckets:
 | **Consensus** | All successful providers flagged it. | Highest |
 | **Majority** | More than one but not all providers. | High |
 | **Individual** | Exactly one provider. | Lower |
+
+**Design question consensus:** For design questions, `consensus_recommendation` captures high-level directional agreement (e.g., "use CRUD, not event sourcing") even when providers recommend different specific variants. It is not populated when providers disagree on direction. Per-approach `recommended_by` counts track the specific variant each provider chose.
 
 ### 9.4 Confidence Ordering
 
@@ -319,10 +323,10 @@ The structured output includes:
 - `providers_used[]`: List of all providers consulted.
 - `failed_providers[]`: Providers that failed or returned malformed responses.
 - `consensus_issues[]`: Issues flagged by all successful providers.
-- `majority_issues[]`: Issues flagged by more than one provider.
+- `majority_issues[]`: Issues flagged by more than one provider. Each item includes `provider_count` and `flagged_by` (array of provider names) to identify which providers raised it.
 - `individual_issues{}`: Issues keyed by provider name.
 - `quality_ratings{}`: Per-provider quality rating.
-- `summary{}`: Counts (total_issues, consensus_count, majority_count).
+- `summary{}`: Counts (`total_issues`, `consensus_count`, `majority_count`) and `synthesis` (1-2 sentence overall assessment).
 - `debate{}` (optional): Debate metadata (rounds_completed, converged).
 
 **Markdown presentation** (for human consumption):
@@ -363,6 +367,17 @@ Issues raised by a single provider. May be valid specialised insights.
 ```
 
 ### 10.2 Design Question Output
+
+The structured output includes:
+
+- `mode`: `"design-question"`
+- `prompt`: The original design question (enables rendering the markdown template without external context).
+- `providers_used[]`: List of all providers consulted.
+- `failed_providers[]`: Providers that failed or returned malformed responses.
+- `consensus_recommendation` (optional): High-level directional agreement when all providers agree, even if they differ on specifics.
+- `approaches[]`: All approaches mentioned by any provider, with `recommended_by` count, merged pros/cons, `risk_level`, and optional `fit_rating`.
+- `summary{}`: Contains `synthesis` (1-2 sentence overall assessment).
+- `debate{}` (optional): Debate metadata (rounds_completed, converged).
 
 **Markdown presentation:**
 

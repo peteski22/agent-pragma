@@ -1,8 +1,9 @@
 {
   "mode": "design-question",
+  "prompt": "Should we use event sourcing or CRUD for our order management system? We expect ~1000 orders/day, need audit trails, and may add a recommendation engine later.",
   "providers_used": ["openai", "anthropic"],
   "failed_providers": [],
-  "consensus_recommendation": "Use CRUD (not event sourcing) as the foundation. Both providers agree event sourcing is over-engineered for the current scale and team experience.",
+  "consensus_recommendation": "Use CRUD (not event sourcing) as the foundation. Both providers agree event sourcing is over-engineered for the current scale and team experience, though they differ on the specific CRUD variant.",
   "approaches": [
     {
       "name": "CRUD with audit log",
@@ -18,7 +19,8 @@
         "Harder to replay history or reconstruct past states",
         "May need refactoring if event-driven features grow significantly"
       ],
-      "risk_level": "low"
+      "risk_level": "low",
+      "fit_rating": "excellent"
     },
     {
       "name": "CRUD with domain events",
@@ -34,7 +36,8 @@
         "Audit trail is still a secondary concern",
         "Domain events need schema versioning as the system evolves"
       ],
-      "risk_level": "low"
+      "risk_level": "low",
+      "fit_rating": "good"
     },
     {
       "name": "Event sourcing",
@@ -50,7 +53,8 @@
         "Significantly more complex than needed at 1000 orders/day",
         "Requires new infrastructure (event store, projections, CQRS)"
       ],
-      "risk_level": "high"
+      "risk_level": "high",
+      "fit_rating": "poor"
     }
   ],
   "summary": {

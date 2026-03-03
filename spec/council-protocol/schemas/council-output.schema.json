@@ -52,7 +52,10 @@
             "enum": ["high", "medium", "low"]
           },
           "location": { "type": "string" },
-          "category": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["craftsmanship", "architecture", "correctness", "invariants", "maintainability"]
+          },
           "description": { "type": "string" },
           "suggestion": { "type": "string" }
         },
@@ -64,20 +67,29 @@
       "description": "Issues flagged by more than one but not all providers (code-review mode).",
       "items": {
         "type": "object",
-        "required": ["severity", "location", "category", "description", "suggestion", "provider_count"],
+        "required": ["severity", "location", "category", "description", "suggestion", "provider_count", "flagged_by"],
         "properties": {
           "severity": {
             "type": "string",
             "enum": ["high", "medium", "low"]
           },
           "location": { "type": "string" },
-          "category": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["craftsmanship", "architecture", "correctness", "invariants", "maintainability"]
+          },
           "description": { "type": "string" },
           "suggestion": { "type": "string" },
           "provider_count": {
             "type": "integer",
             "description": "Number of providers that flagged this issue.",
             "minimum": 2
+          },
+          "flagged_by": {
+            "type": "array",
+            "description": "Names of providers that flagged this issue.",
+            "items": { "type": "string" },
+            "minItems": 2
           }
         },
         "additionalProperties": false
@@ -97,7 +109,10 @@
               "enum": ["high", "medium", "low"]
             },
             "location": { "type": "string" },
-            "category": { "type": "string" },
+            "category": {
+              "type": "string",
+              "enum": ["craftsmanship", "architecture", "correctness", "invariants", "maintainability"]
+            },
             "description": { "type": "string" },
             "suggestion": { "type": "string" }
           },
@@ -113,13 +128,17 @@
         "enum": ["excellent", "good", "fair", "needs-work"]
       }
     },
+    "prompt": {
+      "type": "string",
+      "description": "The original design question (design-question mode). Enables rendering the markdown template without external context."
+    },
     "consensus_recommendation": {
       "type": "string",
-      "description": "Consensus recommendation if all providers agree (design-question mode)."
+      "description": "High-level consensus recommendation when all providers agree on a general direction, even if they differ on specifics (design-question mode)."
     },
     "approaches": {
       "type": "array",
-      "description": "Approaches considered with provider counts (design-question mode).",
+      "description": "All approaches mentioned by any provider, including those not recommended (design-question mode).",
       "items": {
         "type": "object",
         "required": ["name", "recommended_by", "pros", "cons", "risk_level"],
@@ -127,7 +146,7 @@
           "name": { "type": "string" },
           "recommended_by": {
             "type": "integer",
-            "description": "Number of providers recommending this approach.",
+            "description": "Number of providers recommending this approach. Zero indicates the approach was discussed but not recommended.",
             "minimum": 0
           },
           "pros": {
@@ -141,6 +160,11 @@
           "risk_level": {
             "type": "string",
             "enum": ["low", "medium", "high"]
+          },
+          "fit_rating": {
+            "type": "string",
+            "enum": ["excellent", "good", "fair", "poor"],
+            "description": "Aggregated fit rating. When providers disagree, use the most common rating."
           }
         },
         "additionalProperties": false
@@ -187,5 +211,23 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "mode": { "const": "code-review" } }
+      },
+      "then": {
+        "required": ["files_reviewed", "consensus_issues", "majority_issues", "individual_issues", "quality_ratings"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "mode": { "const": "design-question" } }
+      },
+      "then": {
+        "required": ["approaches"]
+      }
+    }
+  ],
   "additionalProperties": false
 }
