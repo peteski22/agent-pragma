@@ -128,7 +128,7 @@
           "recommended_by": {
             "type": "integer",
             "description": "Number of providers recommending this approach.",
-            "minimum": 1
+            "minimum": 0
           },
           "pros": {
             "type": "array",

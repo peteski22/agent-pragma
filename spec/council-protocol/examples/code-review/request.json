@@ -1,0 +1,17 @@
+{
+  "mode": "code-review",
+  "files": [
+    {
+      "path": "backend/app/services/auth.py",
+      "content": "import hashlib\nimport os\nfrom typing import Optional\n\nfrom app.models import User, Session\nfrom app.exceptions import AuthError\n\n\nclass AuthService:\n    \"\"\"Handles user authentication and session management.\"\"\"\n\n    def __init__(self, db, secret_key: str) -> None:\n        self._db = db\n        self._secret_key = secret_key\n\n    def login(self, email: str, password: str) -> Session:\n        \"\"\"Authenticate a user and create a session.\"\"\"\n        user = self._db.query(User).filter_by(email=email).first()\n        if not user:\n            raise AuthError(\"Invalid credentials\")\n\n        hashed = hashlib.sha256(password.encode()).hexdigest()\n        if hashed != user.password_hash:\n            raise AuthError(\"Invalid credentials\")\n\n        token = os.urandom(32).hex()\n        session = Session(user_id=user.id, token=token)\n        self._db.add(session)\n        self._db.commit()\n        return session\n\n    def get_current_user(self, token: str) -> Optional[User]:\n        \"\"\"Look up the user for a session token.\"\"\"\n        session = self._db.query(Session).filter_by(token=token).first()\n        if session:\n            return session.user\n        return None\n"
+    },
+    {
+      "path": "backend/app/api/routes/auth.py",
+      "content": "from flask import Blueprint, request, jsonify\n\nfrom app.services.auth import AuthService\nfrom app.exceptions import AuthError\n\nauth_bp = Blueprint(\"auth\", __name__)\n\n\n@auth_bp.route(\"/login\", methods=[\"POST\"])\ndef login():\n    data = request.get_json()\n    try:\n        session = auth_service.login(data[\"email\"], data[\"password\"])\n        return jsonify({\"token\": session.token})\n    except AuthError as e:\n        return jsonify({\"error\": str(e)}), 401\n    except KeyError:\n        return jsonify({\"error\": \"Missing email or password\"}), 400\n\n\n@auth_bp.route(\"/me\", methods=[\"GET\"])\ndef me():\n    token = request.headers.get(\"Authorization\", \"\").removeprefix(\"Bearer \")\n    user = auth_service.get_current_user(token)\n    if not user:\n        return jsonify({\"error\": \"Unauthorized\"}), 401\n    return jsonify({\"id\": user.id, \"email\": user.email})\n"
+    }
+  ],
+  "context": {
+    "rules": "- Use exception chaining with `from e` for all re-raised exceptions.\n- All public functions must have Google-style docstrings.\n- Use bcrypt for password hashing, never SHA-256.",
+    "architecture": "Flask backend with SQLAlchemy ORM. Services layer handles business logic; routes are thin wrappers."
+  }
+}

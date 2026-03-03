@@ -1,0 +1,8 @@
+{
+  "mode": "design-question",
+  "prompt": "Should we use event sourcing or CRUD for our order management system? We expect ~1000 orders/day, need audit trails, and may add a recommendation engine later.",
+  "context": {
+    "rules": "- PostgreSQL is the primary database.\n- Team has 3 backend engineers, all experienced with Django/SQLAlchemy.\n- No prior experience with event sourcing.",
+    "architecture": "Django monolith with PostgreSQL. REST API consumed by a React frontend. Celery for async tasks."
+  }
+}
