@@ -225,7 +225,7 @@
         "properties": { "mode": { "const": "design-question" } }
       },
       "then": {
-        "required": ["approaches"]
+        "required": ["prompt", "approaches"]
       }
     }
   ],
