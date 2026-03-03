@@ -164,7 +164,7 @@
           "fit_rating": {
             "type": "string",
             "enum": ["excellent", "good", "fair", "poor"],
-            "description": "Aggregated fit rating. When providers disagree, use the most common rating."
+            "description": "Aggregated fit rating. When providers disagree, use the most common rating. Omitted when no provider assessed fit for this approach."
           }
         },
         "additionalProperties": false
@@ -217,7 +217,12 @@
         "properties": { "mode": { "const": "code-review" } }
       },
       "then": {
-        "required": ["files_reviewed", "consensus_issues", "majority_issues", "individual_issues", "quality_ratings"]
+        "required": ["files_reviewed", "consensus_issues", "majority_issues", "individual_issues", "quality_ratings"],
+        "properties": {
+          "summary": {
+            "required": ["total_issues", "consensus_count", "majority_count", "synthesis"]
+          }
+        }
       }
     },
     {
@@ -225,7 +230,12 @@
         "properties": { "mode": { "const": "design-question" } }
       },
       "then": {
-        "required": ["prompt", "approaches"]
+        "required": ["prompt", "approaches"],
+        "properties": {
+          "summary": {
+            "required": ["synthesis"]
+          }
+        }
       }
     }
   ],

@@ -63,7 +63,8 @@
         "properties": { "mode": { "const": "code-review" } }
       },
       "then": {
-        "required": ["files"]
+        "required": ["files"],
+        "not": { "required": ["prompt"] }
       }
     },
     {
@@ -71,7 +72,8 @@
         "properties": { "mode": { "const": "design-question" } }
       },
       "then": {
-        "required": ["prompt"]
+        "required": ["prompt"],
+        "not": { "required": ["files"] }
       }
     }
   ],

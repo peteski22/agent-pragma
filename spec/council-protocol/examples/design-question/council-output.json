@@ -40,6 +40,21 @@
       "fit_rating": "good"
     },
     {
+      "name": "Plain CRUD",
+      "recommended_by": 0,
+      "pros": [
+        "Simplest possible approach",
+        "Team can deliver quickly"
+      ],
+      "cons": [
+        "No audit trail without additional work",
+        "No event stream for future recommendation engine",
+        "May require significant rework later"
+      ],
+      "risk_level": "medium",
+      "fit_rating": "fair"
+    },
+    {
       "name": "Event sourcing",
       "recommended_by": 0,
       "pros": [

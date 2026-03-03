@@ -81,7 +81,7 @@ Keys are resolved in this order:
 
 ### Platform Mode
 
-When `platform` is set (e.g., `"any-llm"`), the orchestrator fetches API keys from the platform service for each provider. Providers marked `local: true` get special treatment:
+When `platform` is set (e.g., `"any-llm"`), the orchestrator fetches API keys from the platform service for each provider. The schema currently constrains `platform` to the enum `["any-llm"]`. Adding new platform values is a minor schema change in a future spec version. Providers marked `local: true` get special treatment:
 
 - **Key fetch tolerant:** If the platform has no key for a local provider, the council proceeds with an empty key instead of failing.
 - **Network fault tolerant:** If the platform is unreachable, local providers still proceed. Non-local providers fail.
@@ -277,6 +277,10 @@ After extraction, validate the parsed JSON against the appropriate schema:
 
 If validation fails, the orchestrator SHOULD still attempt to use the response (best-effort parsing) but MAY mark it as degraded.
 
+### Provider Identity
+
+The `provider` field appears in both the response wrapper ([`provider-response.schema.json`](schemas/provider-response.schema.json)) and the parsed result body ([`code-review-result.schema.json`](schemas/code-review-result.schema.json), [`design-advice-result.schema.json`](schemas/design-advice-result.schema.json)). The wrapper value is authoritative — it is set by the orchestrator. The inner value is set by the LLM and may not match. Orchestrators SHOULD use the wrapper `provider` for all classification and reporting, and MAY ignore the inner `provider` field.
+
 ## 9. Consensus Classification
 
 ### 9.1 Issue Grouping (Code Review)
@@ -375,7 +379,7 @@ The structured output includes:
 - `providers_used[]`: List of all providers consulted.
 - `failed_providers[]`: Providers that failed or returned malformed responses.
 - `consensus_recommendation` (optional): High-level directional agreement when all providers agree, even if they differ on specifics.
-- `approaches[]`: All approaches mentioned by any provider, with `recommended_by` count, merged pros/cons, `risk_level`, and optional `fit_rating`.
+- `approaches[]`: All approaches mentioned by any provider, with `recommended_by` count, merged pros/cons, `risk_level`, and optional `fit_rating` (omitted when no provider assessed fit for the approach; when providers disagree, use the most common rating).
 - `summary{}`: Contains `synthesis` (1-2 sentence overall assessment).
 - `debate{}` (optional): Debate metadata (rounds_completed, converged).
 
