@@ -9,7 +9,9 @@
     "Dispatches go-effective and go-proverbs for .go files",
     "Dispatches python-style for .py files",
     "Dispatches typescript-style for .ts/.tsx files",
-    "Dispatches security for all files (exactly once)"
+    "Dispatches security for all files (exactly once)",
+    "Dispatches state-machine for all files (exactly once)",
+    "Dispatches error-handling for all files (exactly once)"
   ],
   "excludes": [
     "Direct validation logic (delegated to individual validators)",
@@ -23,6 +25,8 @@
     "go-proverbs",
     "python-style",
     "typescript-style",
-    "security"
+    "security",
+    "state-machine",
+    "error-handling"
   ]
 }

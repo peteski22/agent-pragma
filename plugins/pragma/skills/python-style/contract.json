@@ -17,6 +17,7 @@
   ],
   "excludes": [
     "Security vulnerabilities",
+    "Error handling completeness — bare except, broad except Exception (owned by error-handling validator)",
     "Formatting (handled by ruff)",
     "Type correctness (handled by ty or mypy)",
     "Performance",
@@ -24,7 +25,6 @@
   ],
   "hard_rules": [
     "Exception chaining with from e",
-    "No bare except clauses",
     "Modern type hint syntax",
     "No circular imports",
     "Layer separation"

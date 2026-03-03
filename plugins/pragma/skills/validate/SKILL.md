@@ -22,6 +22,7 @@ Based on file extensions, select validators:
 - `.ts` or `.tsx` files → run `typescript-style`
 - All files → run `security`
 - All files → run `state-machine`
+- All files → run `error-handling`
 
 ## Step 2: Run validators in parallel
 
@@ -39,18 +40,21 @@ Invoke the `go-effective` skill using the Skill tool (skill: "go-effective"). Re
 2. Task: Invoke `go-proverbs` skill and return JSON output verbatim.
 3. Task: Invoke `security` skill and return JSON output verbatim.
 4. Task: Invoke `state-machine` skill and return JSON output verbatim.
+5. Task: Invoke `error-handling` skill and return JSON output verbatim.
 
 **Python files changed:**
 1. Task: Invoke `python-style` skill and return JSON output verbatim.
 2. Task: Invoke `security` skill and return JSON output verbatim.
 3. Task: Invoke `state-machine` skill and return JSON output verbatim.
+4. Task: Invoke `error-handling` skill and return JSON output verbatim.
 
 **TypeScript files changed:**
 1. Task: Invoke `typescript-style` skill and return JSON output verbatim.
 2. Task: Invoke `security` skill and return JSON output verbatim.
 3. Task: Invoke `state-machine` skill and return JSON output verbatim.
+4. Task: Invoke `error-handling` skill and return JSON output verbatim.
 
-**Mixed languages:** Combine all applicable validators. Security and state-machine always run exactly once regardless of how many languages are detected.
+**Mixed languages:** Combine all applicable validators. Security, state-machine, and error-handling always run exactly once regardless of how many languages are detected.
 
 Run all applicable Tasks in parallel (multiple Task calls in one response).
 

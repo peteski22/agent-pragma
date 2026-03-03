@@ -44,6 +44,7 @@
    |-----------|--------|------|--------|------|
    | security | ✓ pass | 0 | 0 | 0 |
    | state-machine | ✓ pass | 0 | 0 | 0 |
+   | error-handling | ✓ pass | 0 | 0 | 0 |
    | go-effective | ✗ fail | 1 | 0 | 0 |
 
    ## HARD violations (must fix)
@@ -87,7 +88,7 @@ Every skill works after install with zero additional setup (`/star-chamber` requ
 flowchart TD
     A["/validate"] --> B["Detect changed file types"]
     B --> C["Dispatch applicable validators"]
-    C --> D["security + state-machine + language validators"]
+    C --> D["security + state-machine + error-handling + language validators"]
     D --> E["Aggregate results"]
     E --> F["Severity-graded report"]
 ```
@@ -102,6 +103,7 @@ flowchart TD
 |-------|----------|----------------|
 | `/security` | All | Secrets, injection, path traversal, auth gaps |
 | `/state-machine` | All | State transitions, terminal state correctness, cleanup enforcement |
+| `/error-handling` | Go, Python, TS | Swallowed errors, empty catches, ignored returns, silent fallbacks |
 | `/go-effective` | Go | Effective Go — naming, error handling, interface design |
 | `/go-proverbs` | Go | Go Proverbs — idiomatic patterns, concurrency |
 | `/python-style` | Python | Google docstrings, type hints, exception chaining, architecture |
@@ -111,7 +113,7 @@ flowchart TD
 
 | Skill | What it does |
 |-------|--------------|
-| `/review` | Runs security, state-machine + language-specific validators on current changes. Injects project rules if configured. |
+| `/review` | Runs security, state-machine, error-handling + language-specific validators on current changes. Injects project rules if configured. |
 | `/star-chamber` | Multi-LLM consensus review — prompts for provider setup on first run (requires API keys) |
 
 ### Severity Levels
@@ -187,11 +189,12 @@ When you want implementation with automatic validation. This example assumes `/s
   Linters: biome passed, tsc passed
   security: passed
   state-machine: passed
+  error-handling: passed
   typescript-style: passed
 
 [Phase 4] Complete
   Files changed: 2
-  Semantic validators run: 3
+  Semantic validators run: 4
   Issues: 0
 ```
 

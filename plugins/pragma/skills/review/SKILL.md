@@ -94,6 +94,7 @@ Use the Task tool to spawn validators in parallel based on what changed:
 **Always run:**
 - `security`
 - `state-machine`
+- `error-handling`
 
 **If Go files changed (.go):**
 - `go-effective`

@@ -102,9 +102,8 @@ If you see new code copying an anti-pattern from existing code:
 
 ### Error Handling
 - Exceptions MUST be chained with `raise ... from e` or `raise ... from None`.
-- No bare `except:` clauses; always specify exception type.
 - Custom exceptions MUST inherit from a base exception class.
-- Don't catch Exception unless re-raising or at top-level handlers.
+- Note: bare `except:` and broad `except Exception:` completeness checks are owned by the error-handling validator. This validator owns chaining style and exception hierarchy.
 
 ### Type Hints
 - Functions MUST have type hints for parameters and return values.
