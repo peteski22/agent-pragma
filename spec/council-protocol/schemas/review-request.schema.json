@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/peteski22/agent-pragma/spec/council-protocol/schemas/review-request.schema.json",
+  "title": "Review Request",
+  "description": "Input to a council review round. Captures mode, files/prompt, context, and provider overrides.",
+  "type": "object",
+  "required": ["mode"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["code-review", "design-question"],
+      "description": "Invocation mode."
+    },
+    "files": {
+      "type": "array",
+      "description": "Files to review (code-review mode).",
+      "items": {
+        "type": "object",
+        "required": ["path", "content"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "File path relative to the project root."
+          },
+          "content": {
+            "type": "string",
+            "description": "Full file content."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "prompt": {
+      "type": "string",
+      "description": "The user's design question (design-question mode)."
+    },
+    "context": {
+      "type": "object",
+      "description": "Project context injected into the prompt.",
+      "properties": {
+        "rules": {
+          "type": "string",
+          "description": "Concatenated project rule content."
+        },
+        "architecture": {
+          "type": "string",
+          "description": "Architecture document content."
+        }
+      },
+      "additionalProperties": false
+    },
+    "providers": {
+      "type": "array",
+      "description": "Override which providers to consult. Defaults to all configured providers.",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "mode": { "const": "code-review" } }
+      },
+      "then": {
+        "required": ["files"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "mode": { "const": "design-question" } }
+      },
+      "then": {
+        "required": ["prompt"]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

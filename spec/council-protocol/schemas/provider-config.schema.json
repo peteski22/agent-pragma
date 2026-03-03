@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/peteski22/agent-pragma/spec/council-protocol/schemas/provider-config.schema.json",
+  "title": "Provider Configuration",
+  "description": "Configuration for a single LLM provider in the council.",
+  "type": "object",
+  "required": ["provider", "model"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "Provider name (e.g., openai, anthropic, gemini, llamafile, ollama)."
+    },
+    "model": {
+      "type": "string",
+      "description": "Model identifier (e.g., gpt-4o, claude-sonnet-4-20250514)."
+    },
+    "api_key": {
+      "type": "string",
+      "description": "API key or ${ENV_VAR} reference. Omit for platform mode or keyless local providers."
+    },
+    "max_tokens": {
+      "type": "integer",
+      "description": "Max response tokens.",
+      "default": 16384,
+      "minimum": 1
+    },
+    "api_base": {
+      "type": "string",
+      "format": "uri",
+      "description": "Custom base URL for local/self-hosted LLMs. Omit for cloud providers."
+    },
+    "local": {
+      "type": "boolean",
+      "description": "Set to true for local/self-hosted providers. Affects failure path tolerance.",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}

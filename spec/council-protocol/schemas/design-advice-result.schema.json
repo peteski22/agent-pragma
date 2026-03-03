@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/peteski22/agent-pragma/spec/council-protocol/schemas/design-advice-result.schema.json",
+  "title": "Design Advice Result",
+  "description": "Parsed body of a design question response from a single provider.",
+  "type": "object",
+  "required": ["provider", "recommendation", "approaches", "summary"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "Provider name."
+    },
+    "recommendation": {
+      "type": "string",
+      "description": "The provider's recommended approach."
+    },
+    "approaches": {
+      "type": "array",
+      "description": "List of approaches considered.",
+      "items": {
+        "type": "object",
+        "required": ["name", "pros", "cons", "risk_level", "fit_rating"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Approach name."
+          },
+          "pros": {
+            "type": "array",
+            "description": "Advantages of this approach.",
+            "items": { "type": "string" }
+          },
+          "cons": {
+            "type": "array",
+            "description": "Disadvantages of this approach.",
+            "items": { "type": "string" }
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Risk level of this approach."
+          },
+          "fit_rating": {
+            "type": "string",
+            "enum": ["excellent", "good", "fair", "poor"],
+            "description": "How well this approach fits the project's existing patterns."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "string",
+      "description": "One paragraph overall recommendation with reasoning."
+    }
+  },
+  "additionalProperties": false
+}

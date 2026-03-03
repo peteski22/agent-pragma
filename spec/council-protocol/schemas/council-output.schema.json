@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/peteski22/agent-pragma/spec/council-protocol/schemas/council-output.schema.json",
+  "title": "Council Output",
+  "description": "Final aggregated output from a council review or design question session.",
+  "type": "object",
+  "required": ["mode", "providers_used", "failed_providers", "summary"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["code-review", "design-question"],
+      "description": "Invocation mode."
+    },
+    "files_reviewed": {
+      "type": "array",
+      "description": "List of reviewed file paths (code-review mode).",
+      "items": { "type": "string" }
+    },
+    "providers_used": {
+      "type": "array",
+      "description": "All providers consulted (including failed ones).",
+      "items": { "type": "string" }
+    },
+    "failed_providers": {
+      "type": "array",
+      "description": "Providers that failed or returned malformed responses.",
+      "items": {
+        "type": "object",
+        "required": ["provider", "error"],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider name."
+          },
+          "error": {
+            "type": "string",
+            "description": "Error description."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "consensus_issues": {
+      "type": "array",
+      "description": "Issues flagged by all successful providers (code-review mode).",
+      "items": {
+        "type": "object",
+        "required": ["severity", "location", "category", "description", "suggestion"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "location": { "type": "string" },
+          "category": { "type": "string" },
+          "description": { "type": "string" },
+          "suggestion": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "majority_issues": {
+      "type": "array",
+      "description": "Issues flagged by more than one but not all providers (code-review mode).",
+      "items": {
+        "type": "object",
+        "required": ["severity", "location", "category", "description", "suggestion", "provider_count"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "location": { "type": "string" },
+          "category": { "type": "string" },
+          "description": { "type": "string" },
+          "suggestion": { "type": "string" },
+          "provider_count": {
+            "type": "integer",
+            "description": "Number of providers that flagged this issue.",
+            "minimum": 2
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "individual_issues": {
+      "type": "object",
+      "description": "Issues flagged by a single provider, keyed by provider name (code-review mode).",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["severity", "location", "category", "description", "suggestion"],
+          "properties": {
+            "severity": {
+              "type": "string",
+              "enum": ["high", "medium", "low"]
+            },
+            "location": { "type": "string" },
+            "category": { "type": "string" },
+            "description": { "type": "string" },
+            "suggestion": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "quality_ratings": {
+      "type": "object",
+      "description": "Per-provider quality rating (code-review mode).",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["excellent", "good", "fair", "needs-work"]
+      }
+    },
+    "consensus_recommendation": {
+      "type": "string",
+      "description": "Consensus recommendation if all providers agree (design-question mode)."
+    },
+    "approaches": {
+      "type": "array",
+      "description": "Approaches considered with provider counts (design-question mode).",
+      "items": {
+        "type": "object",
+        "required": ["name", "recommended_by", "pros", "cons", "risk_level"],
+        "properties": {
+          "name": { "type": "string" },
+          "recommended_by": {
+            "type": "integer",
+            "description": "Number of providers recommending this approach.",
+            "minimum": 1
+          },
+          "pros": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "cons": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "Summary counts and synthesis.",
+      "properties": {
+        "total_issues": {
+          "type": "integer",
+          "description": "Total number of unique issues found (code-review mode)."
+        },
+        "consensus_count": {
+          "type": "integer",
+          "description": "Number of consensus issues (code-review mode)."
+        },
+        "majority_count": {
+          "type": "integer",
+          "description": "Number of majority issues (code-review mode)."
+        },
+        "synthesis": {
+          "type": "string",
+          "description": "1-2 sentence overall synthesis."
+        }
+      },
+      "additionalProperties": false
+    },
+    "debate": {
+      "type": "object",
+      "description": "Debate metadata. Present only when debate mode was used.",
+      "properties": {
+        "rounds_completed": {
+          "type": "integer",
+          "description": "Number of debate rounds completed.",
+          "minimum": 1
+        },
+        "converged": {
+          "type": "boolean",
+          "description": "Whether the debate converged early."
+        }
+      },
+      "required": ["rounds_completed", "converged"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
