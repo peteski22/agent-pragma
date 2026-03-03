@@ -173,6 +173,7 @@ After implementation is complete, run validation.
    - Note: This duplicates the dispatch logic in `validate` intentionally — implement needs inline control for the fix-and-re-validate loop. Keep both in sync.
      - `security` (always)
      - `state-machine` (always)
+     - `error-handling` (always)
      - `go-effective` (if Go files changed)
      - `go-proverbs` (if Go files changed)
      - `python-style` (if Python files changed)
