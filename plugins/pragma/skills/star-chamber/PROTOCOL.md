@@ -266,10 +266,17 @@ if [[ -d "$RULE_DIR" ]]; then
       pattern="${pattern#- }"
       pattern="${pattern%\"}"
       pattern="${pattern#\"}"
+      # When pattern starts with **/, also try without the prefix.
+      # Bash [[ == ]] treats **/ as requiring a path separator,
+      # so **/*.py won't match root-level files like main.py.
+      alt_pattern=""
+      if [[ "$pattern" == \*\*/* ]]; then
+        alt_pattern="${pattern#\*\*/}"
+      fi
       while IFS= read -r file_path; do
         [[ -z "$file_path" ]] && continue
         # shellcheck disable=SC2254
-        if [[ "$file_path" == $pattern ]]; then
+        if [[ "$file_path" == $pattern ]] || [[ -n "$alt_pattern" && "$file_path" == $alt_pattern ]]; then
           matched=true
           break
         fi
