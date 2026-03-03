@@ -187,9 +187,11 @@ flowchart TB
         FixLint --> PyLint & TSLint & GoLint
 
         subgraph SemVal["Semantic Validators"]
-            LintPass -->|Yes| SecVal["security<br/>(all files)"]
-            LintPass -->|Yes| StmVal["state-machine<br/>(all files)"]
-            LintPass -->|Yes| ErrVal["error-handling<br/>(all files)"]
+            subgraph CrossLang["Cross-language (all files)"]
+                LintPass -->|Yes| SecVal["security"]
+                LintPass -->|Yes| StmVal["state-machine"]
+                LintPass -->|Yes| ErrVal["error-handling"]
+            end
 
             LintPass -->|Yes, .py| PyStyle["python-style"]
             LintPass -->|Yes, .ts/.tsx| TSStyle["typescript-style"]
@@ -197,7 +199,7 @@ flowchart TB
             LintPass -->|Yes, .go| GoProv["go-proverbs"]
         end
 
-        SecVal & StmVal & ErrVal & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
+        CrossLang & PyStyle & TSStyle & GoEff & GoProv --> Agg[Aggregate results]
         Agg --> ValPass{All pass?}
         ValPass -->|No| FixViol[Fix violations]
         FixViol --> PyLint & TSLint & GoLint
@@ -252,9 +254,11 @@ flowchart TD
         end
 
         subgraph Semantic["Semantic Validators"]
-            SecVal[security - all languages]
-            StmVal[state-machine - all languages]
-            ErrVal[error-handling - all languages]
+            subgraph CrossLang2["Cross-language"]
+                SecVal[security]
+                StmVal[state-machine]
+                ErrVal[error-handling]
+            end
             PyVal[python-style - Python]
             TSVal[typescript-style - TypeScript]
             GoEff[go-effective - Go]
@@ -267,8 +271,8 @@ flowchart TD
 
         LintFail -->|No| FixLint[Fix lint errors]
         FixLint --> Lint
-        LintFail -->|Yes| SecVal & StmVal & ErrVal & PyVal & TSVal & GoEff & GoProv
-        SecVal & StmVal & ErrVal & PyVal & TSVal & GoEff & GoProv --> Agg
+        LintFail -->|Yes| CrossLang2 & PyVal & TSVal & GoEff & GoProv
+        CrossLang2 & PyVal & TSVal & GoEff & GoProv --> Agg
         Agg --> Fix
         Fix --> ReVal
         ReVal -->|Yes| Lint
@@ -316,11 +320,20 @@ Each validator has a `contract.json` defining its scope and assumptions.
 |-----------|----------|-------|----------|---------|
 | **security** | All | Secrets, Injection, Path traversal, Auth gaps | Code style, Language idioms, Performance | No tool deps (pipeline-gated) |
 | **state-machine** | All | State transitions, Terminal state correctness, Cleanup enforcement | Code style, Performance | No tool deps (pipeline-gated) |
-| **error-handling** | All | Swallowed errors, Ignored returns, Silent fallbacks, Missing propagation, Broad catching | Error message style, Security implications, Chaining style, Wrapping format | No tool deps (pipeline-gated) |
+| **error-handling** | All | Swallowed errors, Ignored returns, Silent fallbacks, Broad catching | Error message style, Security implications, Chaining style, Wrapping format, Error context/wrapping quality | No tool deps (pipeline-gated) |
 | **go-effective** | Go | Naming, Error handling, Interface design, Control flow | Security, Go Proverbs, Formatting | gofmt, golangci-lint |
 | **go-proverbs** | Go | Idiomatic Go philosophy, Concurrency patterns, Abstraction | Security, Effective Go details, Formatting | golangci-lint |
 | **python-style** | Python | Google docstrings, Type hints, Error handling, Layered architecture | Security, Performance | ruff, ty/mypy, pre-commit |
 | **typescript-style** | TypeScript | Strict mode, React patterns, Hooks usage, State management | Security, Performance | biome, pre-commit |
+
+### Rule Loading Patterns
+
+Validators use one of two internal structures for defining rules:
+
+- **Inline rules** (security, state-machine): All rules are embedded directly in SKILL.md. Suitable for validators with short, language-agnostic rules that apply uniformly to all file types.
+- **Language-specific rule files** (error-handling): Rules are split into a `languages/` subdirectory with per-language files (e.g., `languages/go.md`, `languages/python.md`). The SKILL.md loads the applicable files based on changed file extensions. Suitable for cross-language validators that need distinct syntax patterns per language.
+
+Both patterns produce the same unified JSON output. The choice is an internal implementation detail of the validator.
 
 ### Validator Dependency Chain
 
@@ -366,10 +379,10 @@ flowchart LR
 |-----------|------------|--------------|
 | **security** | Secrets, Injection, Path traversal, Auth gaps | Insecure configurations |
 | **state-machine** | Invalid transitions, Unreachable states | Missing cleanup on terminal states |
-| **error-handling** | Ignored error returns, Empty catch/except, Bare except, Swallowed rejections | Silent fallbacks, Bare return err, Catch returns default, Re-raise without context |
+| **error-handling** | Ignored error returns, Empty catch/except, Bare except, Swallowed rejections | Silent fallbacks, Catch returns default |
 | **go-effective** | Doc comments, Error return position, No pointer-to-interface | Interface size, Early returns, Parameter count |
 | **go-proverbs** | Share memory by communicating, Errors are values, Handle errors gracefully | Interface size, Zero value, Clear vs clever |
-| **python-style** | Exception chaining with `from e`, No bare `except:` | Google docstrings, Modern type hints (`str \| None`) |
+| **python-style** | Exception chaining with `from e`, Custom exception hierarchy | Google docstrings, Modern type hints (`str \| None`) |
 | **typescript-style** | Strict mode enabled, Functional components only | Proper hook dependencies, TanStack Query for server state |
 
 Cross-language validators (security, state-machine, error-handling) check structural patterns across all languages. Language-specific validators check language idioms. Where both could apply, the cross-language validator owns the structural check and the language validator owns the idiom check. Specifically: error-handling owns *completeness* (is the error handled?), language validators own *style* (how is the error wrapped/chained?).

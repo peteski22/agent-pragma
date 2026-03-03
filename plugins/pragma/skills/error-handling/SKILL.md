@@ -16,7 +16,6 @@ You are a focused error handling validator. Check recent code changes for incomp
 This validator checks ONLY:
 - Swallowed errors (empty catch/except blocks, ignored error returns)
 - Silent fallbacks (returning defaults without logging or propagation)
-- Missing error propagation (errors caught but not re-raised or wrapped)
 - Overly broad catching (bare `except:`, `catch (Exception)`, untyped `catch`)
 - Ignored error returns (discarding error values, unchecked promises)
 
@@ -92,6 +91,8 @@ Apply the patterns loaded in Step 2 to the diff from Step 1. Where LSP type info
 
 For each finding, categorize as HARD, SHOULD, or WARN per the language pattern file definitions.
 
+**Intra-rule precedence:** When a single code pattern matches multiple rules at different severity levels (e.g., a Python `except Exception: return None` matches both a HARD rule and a SHOULD rule), report only the highest severity. Do not report the same location under multiple rules.
+
 **Cross-validator scope boundaries:**
 - This validator owns **completeness** — is the error handled at all?
 - `go-effective` owns **style** — is the error wrapped with `%w`?
@@ -109,6 +110,7 @@ Output MUST follow this JSON schema exactly. Do not include prose outside the JS
   "validator": "error-handling",
   "applied_rules": ["Error Handling Completeness"],
   "files_checked": ["file1.go", "file2.py"],
+  "lsp_enriched": boolean,
   "pass": boolean,
   "hard_violations": [
     {
@@ -143,6 +145,8 @@ Output MUST follow this JSON schema exactly. Do not include prose outside the JS
 }
 ```
 
+Set `lsp_enriched: true` if any LSP hover call returned useful type information during the run, `false` otherwise. This does not affect pass/fail — it provides transparency on whether findings benefited from type-checked precision or relied on text pattern matching alone.
+
 Set `pass: false` if hard_count > 0 or should_count > 0 (unless justified).
 
 If no error-handling-relevant changes are detected, output a clean pass:
@@ -152,6 +156,7 @@ If no error-handling-relevant changes are detected, output a clean pass:
   "validator": "error-handling",
   "applied_rules": ["Error Handling Completeness"],
   "files_checked": [],
+  "lsp_enriched": false,
   "pass": true,
   "hard_violations": [],
   "should_violations": [],

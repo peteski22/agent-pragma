@@ -12,13 +12,6 @@
 - Example: `if err != nil { /* no-op */ }`.
 - Why HARD: Acknowledges the error exists then deliberately ignores it. Worse than not checking because it looks intentional.
 
-## SHOULD violations (fix or justify)
-
-### Errors returned without context
-- Pattern: bare `return err` without wrapping (e.g., `return fmt.Errorf("...: %w", err)`).
-- Note: the *wrapping format* (`%w` vs `%s`) is owned by `go-effective`. This validator only checks whether *any* context is added at all.
-- Justification: acceptable at the top of a call stack where the error already carries sufficient context.
-
 ## WARN (advisory)
 
 ### Errors only logged

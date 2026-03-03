@@ -19,11 +19,11 @@
 - Note: if the catch block logs before returning the default, this downgrades to WARN.
 - Justification: acceptable in optional enhancement paths where the default is a documented fallback.
 
+## WARN (advisory)
+
 ### Broad catch without re-throw
 - Pattern: `catch (e) { ... }` that handles the error but catches all error types without narrowing (e.g., no `instanceof` check) and does not re-throw.
-- Justification: acceptable when the catch genuinely needs to handle all error types (e.g., top-level error boundary).
-
-## WARN (advisory)
+- Why WARN: TypeScript `catch` is inherently untyped (`unknown` or `any`), so every catch block technically matches this pattern. Flagging as advisory rather than requiring justification avoids excessive noise while still surfacing the pattern for review.
 
 ### Console-only handling
 - Pattern: `catch (e) { console.error(e) }` with no re-throw or return.

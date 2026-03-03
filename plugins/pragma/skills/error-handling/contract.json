@@ -4,11 +4,11 @@
   "input": ["git diff (all files)"],
   "output_schema": "hard/should/warn with JSON structure (unified)",
   "assumes": [],
+  "optional_tools": ["LSP (hover for type enrichment — graceful fallback to text matching)"],
   "scope": [
     "Swallowed errors and empty catch/except blocks",
     "Ignored error returns and discarded error values",
     "Silent fallbacks returning defaults without logging or propagation",
-    "Missing error propagation",
     "Overly broad catching (bare except, untyped catch)"
   ],
   "excludes": [
@@ -28,12 +28,11 @@
   ],
   "should_rules": [
     "Silent fallback returns (return None, return default) without logging",
-    "Errors returned without context (bare return err in Go)",
-    "Catch returns default without logging in TypeScript",
-    "Re-raise without context in Python"
+    "Catch returns default without logging in TypeScript"
   ],
   "warn_rules": [
     "Errors only logged but not propagated",
+    "Broad catch without re-throw in TypeScript",
     "Console-only error handling in TypeScript",
     "Floating promises"
   ],

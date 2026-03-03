@@ -24,11 +24,6 @@
 - Note: if the except block logs before returning the default, this downgrades to WARN.
 - Justification: acceptable in lookup-style functions where `None` is a documented "not found" return.
 
-### Re-raise without context
-- Pattern: bare `raise` or `raise NewError()` without `from e`.
-- Note: the *chaining style* (`from e`) is owned by `python-style`. This validator only checks whether the original exception is completely lost (no `from`, no logging, no wrapping).
-- Justification: acceptable when the re-raised error is a deliberate domain translation and the original is logged elsewhere.
-
 ## WARN (advisory)
 
 ### Log-only handling
