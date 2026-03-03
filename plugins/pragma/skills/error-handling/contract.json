@@ -1,0 +1,44 @@
+{
+  "name": "error-handling",
+  "version": "1.0.0",
+  "input": ["git diff (all files)"],
+  "output_schema": "hard/should/warn with JSON structure (unified)",
+  "assumes": [],
+  "scope": [
+    "Swallowed errors and empty catch/except blocks",
+    "Ignored error returns and discarded error values",
+    "Silent fallbacks returning defaults without logging or propagation",
+    "Missing error propagation",
+    "Overly broad catching (bare except, untyped catch)"
+  ],
+  "excludes": [
+    "Error message wording or style",
+    "Security implications of error handling",
+    "Exception chaining style (from e)",
+    "Error wrapping format (%w vs %s)",
+    "Logging configuration or format",
+    "Code style or formatting"
+  ],
+  "hard_rules": [
+    "Ignored error returns (_ := in Go)",
+    "Empty catch/except blocks",
+    "Bare except: in Python",
+    "Broad except Exception: without re-raise in Python",
+    "Swallowed promise rejections in TypeScript"
+  ],
+  "should_rules": [
+    "Silent fallback returns (return None, return default) without logging",
+    "Errors returned without context (bare return err in Go)",
+    "Catch returns default without logging in TypeScript",
+    "Re-raise without context in Python"
+  ],
+  "warn_rules": [
+    "Errors only logged but not propagated",
+    "Console-only error handling in TypeScript",
+    "Floating promises"
+  ],
+  "references": [
+    "Error Handling Completeness"
+  ],
+  "batch_size": 50
+}
