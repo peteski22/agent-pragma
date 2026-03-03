@@ -21,6 +21,7 @@
 - [Security Considerations](#security-considerations)
 - [Troubleshooting](#troubleshooting)
 - [Cost Warning](#cost-warning)
+- [Specification](#specification)
 
 ## Runtime Constraint
 
@@ -302,6 +303,10 @@ fi
 
 Build a structured prompt for Star-Chamber. Use the example template pattern below and adapt or extend its sections as needed when constructing the prompt.
 
+The JSON output formats expected from providers are defined in `spec/council-protocol/SPEC.md`. Relevant schemas:
+- `spec/council-protocol/schemas/code-review-result.schema.json`
+- `spec/council-protocol/schemas/design-advice-result.schema.json`
+
 **Prompt construction:** Write the prompt to a temp file using `cat >` with a single-quoted heredoc for the static template, then append dynamic content (file contents, rules) with `cat >>`. Single-quoted heredocs (`<< 'EOF'`) prevent shell expansion, which is what you want for the template — but it also means `$VARIABLE` references inside the heredoc are passed as literal text, not expanded. Append dynamic content separately.
 
 `SC_TMPDIR` was created in Step 2 (parallel mode) or Step 4 (debate mode). Re-set it at the top of each bash block since variables do not persist between invocations.
@@ -484,6 +489,8 @@ Please provide your perspective on these points. Note where you agree, disagree,
 
 ## Step 5: Parse and Aggregate Results
 
+The response parsing algorithm and consensus classification rules are formally specified in `spec/council-protocol/SPEC.md` (sections *Response Parsing* and *Consensus Classification*). The steps below summarize the implementation.
+
 For each successful provider response:
 
 1. **Extract JSON** from the response. Providers often wrap JSON in markdown code blocks like ` ```json {...} ``` `. Extract the JSON object. If parsing fails, note the provider as having a malformed response.
@@ -501,7 +508,7 @@ For each successful provider response:
 
 ## Step 6: Present Results to User
 
-Present the aggregated results using this format. Always show consensus issues first.
+Present the aggregated results using this format. Always show consensus issues first. The output schema and markdown presentation templates are defined in `spec/council-protocol/SPEC.md` (section *Output Format*).
 
 ```markdown
 ## Star-Chamber Review
@@ -565,6 +572,10 @@ Issues raised by a single provider. May be valid specialized insights.
 ```
 
 ## Configuration
+
+The provider configuration schema is formally specified in `spec/council-protocol/SPEC.md` (section *Provider Configuration*). Relevant schemas:
+- `spec/council-protocol/schemas/provider-config.schema.json`
+- `spec/council-protocol/schemas/council-config.schema.json`
 
 Provider configuration is read from `~/.config/star-chamber/providers.json`.
 
@@ -738,3 +749,7 @@ This means all successful providers gave the same responses in consecutive round
 Each invocation calls all configured providers. With 3 providers reviewing ~2000 tokens:
 - ~$0.02-0.10 per invocation depending on models
 - Basic mode (no debate) is used when auto-invoked to keep costs predictable.
+
+## Specification
+
+The portable council protocol (invocation modes, prompt templates, response parsing, consensus classification, and output format) is formally specified in `spec/council-protocol/SPEC.md` with JSON schemas and worked examples. This PROTOCOL.md contains the Claude Code-specific orchestration implementation — Bash subprocess isolation, `uv run` invocation, temp file management, and setup wizard flow. As a rule of thumb: if it affects interoperability or wire format, it belongs in the spec; if it concerns Claude Code runtime or tooling constraints, it belongs here.
