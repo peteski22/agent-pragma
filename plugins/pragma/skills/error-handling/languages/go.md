@@ -3,8 +3,8 @@
 ## HARD violations (must fix)
 
 ### Ignored error returns
-- Pattern: `_ :=` or `_ =` where the discarded value is an `error`.
-- Example: `_ := os.Remove(path)`.
+- Pattern: `_ =` where the discarded value is an `error`, or multi-return `result, _ :=` where the blank identifier replaces an `error`.
+- Examples: `_ = os.Remove(path)` (single return), `conn, _ := net.Dial("tcp", addr)` (multi-return, error discarded).
 - Why HARD: Silently discards failures. The caller has no way to know the operation failed.
 
 ### Empty error checks

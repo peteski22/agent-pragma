@@ -17,7 +17,7 @@
   ],
   "excludes": [
     "Security vulnerabilities",
-    "Bare except (owned by error-handling validator)",
+    "Error handling completeness — bare except, broad except Exception (owned by error-handling validator)",
     "Formatting (handled by ruff)",
     "Type correctness (handled by ty or mypy)",
     "Performance",

@@ -16,6 +16,7 @@
 - Pattern: `except Exception:` (or `except BaseException:`) where the body does not re-raise.
 - Example: `except Exception: return None`.
 - Why HARD: Catches far too broadly and swallows the error. Either narrow the exception type or re-raise.
+- Note: `except Exception: return None` also matches the SHOULD "silent fallback" rule below, but per the intra-rule precedence clause this location is reported only as HARD.
 
 ## SHOULD violations (fix or justify)
 

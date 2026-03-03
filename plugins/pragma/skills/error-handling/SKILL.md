@@ -77,7 +77,7 @@ This step enhances detection precision using LSP hover information. **If LSP is 
 
 For each error-handling code path identified in the diff, attempt LSP `hover` on key variables and return values to confirm types:
 
-**Go:** Hover on the left-hand side of `:=` assignments where `_` is used. Confirm the discarded value is actually an `error` type, not just any blank identifier. This reduces false positives from `_ :=` patterns that discard non-error values.
+**Go:** Hover on the left-hand side of assignments where `_` discards a value. Confirm the discarded value is actually an `error` type, not just any blank identifier. This reduces false positives from `_ =` patterns that discard non-error values.
 
 **Python:** Hover on caught exception variables to confirm the exception hierarchy. Helps distinguish genuinely overly-broad catches from catches where the base class is appropriate for the context.
 
@@ -87,11 +87,11 @@ For each error-handling code path identified in the diff, attempt LSP `hover` on
 
 ## Step 4: Check for error handling violations
 
-Apply the patterns loaded in Step 2 to the diff from Step 1. Where LSP type information was gathered in Step 3, use it to refine findings (e.g., skip `_ :=` findings where LSP confirmed the discarded value is not an `error`).
+Apply the patterns loaded in Step 2 to the diff from Step 1. Where LSP type information was gathered in Step 3, use it to refine findings (e.g., skip `_ =` findings where LSP confirmed the discarded value is not an `error`).
 
 For each finding, categorize as HARD, SHOULD, or WARN per the language pattern file definitions.
 
-**Intra-rule precedence:** When a single code pattern matches multiple rules at different severity levels (e.g., a Python `except Exception: return None` matches both a HARD rule and a SHOULD rule), report only the highest severity. Do not report the same location under multiple rules.
+**Intra-rule precedence:** First, apply any severity downgrades defined in the language pattern files (e.g., a SHOULD that downgrades to WARN when logging is present). Then, when a single code location still matches multiple rules at different severity levels (e.g., a Python `except Exception: return None` matches both a HARD rule and a SHOULD rule), report only the highest severity. Do not report the same location under multiple rules.
 
 **Cross-validator scope boundaries:**
 - This validator owns **completeness** — is the error handled at all?

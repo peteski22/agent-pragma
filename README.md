@@ -103,7 +103,7 @@ flowchart TD
 |-------|----------|----------------|
 | `/security` | All | Secrets, injection, path traversal, auth gaps |
 | `/state-machine` | All | State transitions, terminal state correctness, cleanup enforcement |
-| `/error-handling` | All | Swallowed errors, empty catches, ignored returns, silent fallbacks |
+| `/error-handling` | Go, Python, TS | Swallowed errors, empty catches, ignored returns, silent fallbacks |
 | `/go-effective` | Go | Effective Go — naming, error handling, interface design |
 | `/go-proverbs` | Go | Go Proverbs — idiomatic patterns, concurrency |
 | `/python-style` | Python | Google docstrings, type hints, exception chaining, architecture |

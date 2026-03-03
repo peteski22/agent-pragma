@@ -20,7 +20,7 @@
     "Code style or formatting"
   ],
   "hard_rules": [
-    "Ignored error returns (_ := in Go)",
+    "Ignored error returns (_ = in Go)",
     "Empty catch/except blocks",
     "Bare except: in Python",
     "Broad except Exception: without re-raise in Python",
