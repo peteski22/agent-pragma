@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/peteski22/agent-pragma/spec/council-protocol/schemas/council-config.schema.json",
+  "title": "Council Configuration",
+  "description": "Full configuration file for the council protocol (providers array + settings).",
+  "type": "object",
+  "required": ["providers"],
+  "properties": {
+    "providers": {
+      "type": "array",
+      "description": "List of LLM providers to consult.",
+      "items": {
+        "$ref": "provider-config.schema.json"
+      },
+      "minItems": 1
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["any-llm"],
+      "description": "Platform for centralised key management. When set, API keys are fetched from the platform service."
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "description": "Default per-provider timeout in seconds.",
+      "default": 60,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false
+}
