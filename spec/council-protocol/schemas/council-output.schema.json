@@ -218,6 +218,13 @@
       },
       "then": {
         "required": ["files_reviewed", "consensus_issues", "majority_issues", "individual_issues", "quality_ratings"],
+        "not": {
+          "anyOf": [
+            { "required": ["prompt"] },
+            { "required": ["approaches"] },
+            { "required": ["consensus_recommendation"] }
+          ]
+        },
         "properties": {
           "summary": {
             "required": ["total_issues", "consensus_count", "majority_count", "synthesis"]
@@ -231,6 +238,15 @@
       },
       "then": {
         "required": ["prompt", "approaches"],
+        "not": {
+          "anyOf": [
+            { "required": ["files_reviewed"] },
+            { "required": ["consensus_issues"] },
+            { "required": ["majority_issues"] },
+            { "required": ["individual_issues"] },
+            { "required": ["quality_ratings"] }
+          ]
+        },
         "properties": {
           "summary": {
             "required": ["synthesis"]

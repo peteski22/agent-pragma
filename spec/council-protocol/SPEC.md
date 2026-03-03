@@ -2,7 +2,7 @@
 
 This document specifies the portable council deliberation protocol — the invocation modes, prompt templates, response parsing, consensus classification, and output format that any orchestrator can implement independently.
 
-The orchestrator-specific implementation for Claude Code lives in [`plugins/pragma/skills/star-chamber/PROTOCOL.md`](../../plugins/pragma/skills/star-chamber/PROTOCOL.md). That document handles Bash subprocess isolation, `uv run` invocation, temp file management, and other runtime concerns. This spec covers only the portable protocol logic.
+The orchestrator-specific implementation for Claude Code lives in `plugins/pragma/skills/star-chamber/PROTOCOL.md`. That document handles Bash subprocess isolation, `uv run` invocation, temp file management, and other runtime concerns. This spec covers only the portable protocol logic.
 
 **Status:** Draft (v0.1). Breaking changes may occur before v1.0.
 
@@ -84,7 +84,7 @@ Keys are resolved in this order:
 When `platform` is set (e.g., `"any-llm"`), the orchestrator fetches API keys from the platform service for each provider. The schema currently constrains `platform` to the enum `["any-llm"]`. Adding new platform values is a minor schema change in a future spec version. Providers marked `local: true` get special treatment:
 
 - **Key fetch tolerant:** If the platform has no key for a local provider, the council proceeds with an empty key instead of failing.
-- **Network fault tolerant:** If the platform is unreachable, local providers still proceed. Non-local providers fail.
+- **Network fault-tolerant:** If the platform is unreachable, local providers still proceed. Non-local providers fail.
 - **Auth error guidance:** If a local provider returns an auth error, the error message should suggest adding the key to the platform or setting `api_key` directly.
 
 ### Local Provider Semantics
@@ -265,7 +265,7 @@ This approach follows [Chatham House rules](https://www.chathamhouse.org/about-u
 
 For each provider response:
 
-1. **Try extracting JSON from a markdown code block.** Look for `` ```json `` followed by a JSON object and closed by `` ``` ``. Extract and parse the JSON object.
+1. **Try extracting JSON from a Markdown code block.** Look for `` ```json `` followed by a JSON object and closed by `` ``` ``. Extract and parse the JSON object.
 2. **Fallback: try parsing the entire response as JSON.** If step 1 finds no code block, attempt to parse the full response text as JSON.
 3. **Malformed response:** If both steps fail, mark the provider as failed with a "malformed response" error. Continue processing other providers.
 
@@ -375,7 +375,7 @@ Issues raised by a single provider. May be valid specialised insights.
 The structured output includes:
 
 - `mode`: `"design-question"`
-- `prompt`: The original design question (enables rendering the markdown template without external context).
+- `prompt`: The original design question (enables rendering the Markdown template without external context).
 - `providers_used[]`: List of all providers consulted.
 - `failed_providers[]`: Providers that failed or returned malformed responses.
 - `consensus_recommendation` (optional): High-level directional agreement when all providers agree, even if they differ on specifics.

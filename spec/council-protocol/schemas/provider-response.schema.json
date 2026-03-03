@@ -31,10 +31,12 @@
     "properties": { "success": { "const": true } }
   },
   "then": {
-    "required": ["content"]
+    "required": ["content"],
+    "not": { "required": ["error"] }
   },
   "else": {
-    "required": ["error"]
+    "required": ["error"],
+    "not": { "required": ["content"] }
   },
   "additionalProperties": false
 }

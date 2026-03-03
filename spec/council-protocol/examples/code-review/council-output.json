@@ -4,8 +4,13 @@
     "backend/app/services/auth.py",
     "backend/app/api/routes/auth.py"
   ],
-  "providers_used": ["openai", "anthropic", "gemini"],
-  "failed_providers": [],
+  "providers_used": ["openai", "anthropic", "gemini", "deepseek"],
+  "failed_providers": [
+    {
+      "provider": "deepseek",
+      "error": "Request timed out after 60s"
+    }
+  ],
   "consensus_issues": [
     {
       "severity": "high",

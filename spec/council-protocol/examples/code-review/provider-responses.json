@@ -16,5 +16,11 @@
     "model": "gemini-2.0-flash",
     "success": true,
     "content": "```json\n{\n  \"provider\": \"gemini\",\n  \"quality_rating\": \"fair\",\n  \"issues\": [\n    {\n      \"severity\": \"high\",\n      \"location\": \"backend/app/services/auth.py:23\",\n      \"category\": \"correctness\",\n      \"description\": \"Password hashing uses SHA-256 which is cryptographically unsuitable for password storage. Project rules explicitly require bcrypt.\",\n      \"suggestion\": \"Replace with bcrypt. Install the bcrypt package and use bcrypt.hashpw/bcrypt.checkpw.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"location\": \"backend/app/api/routes/auth.py:11\",\n      \"category\": \"correctness\",\n      \"description\": \"The variable auth_service is referenced but never defined or imported.\",\n      \"suggestion\": \"Create the AuthService instance via a factory or inject it through Flask's application context.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"location\": \"backend/app/api/routes/auth.py:22\",\n      \"category\": \"craftsmanship\",\n      \"description\": \"The /me endpoint lacks a docstring.\",\n      \"suggestion\": \"Add a Google-style docstring per project rules.\"\n    }\n  ],\n  \"praise\": [\n    \"Service layer is cleanly separated from routes.\",\n    \"Consistent error handling pattern in the login endpoint.\"\n  ],\n  \"summary\": \"Solid architectural foundation with clean separation of concerns. The SHA-256 password hashing is the most critical issue and directly violates project rules. The undefined auth_service variable would also prevent the code from running.\"\n}\n```"
+  },
+  {
+    "provider": "deepseek",
+    "model": "deepseek-r1",
+    "success": false,
+    "error": "Request timed out after 60s"
   }
 ]
