@@ -11,29 +11,43 @@
 - [Step 0: Check Prerequisites](#step-0-check-prerequisites)
 - [Invocation Modes: Code Review vs Design Question](#invocation-modes-code-review-vs-design-question)
 - [Step 1: Identify Review Targets](#step-1-identify-review-targets)
-- [Step 2: Inject Context](#step-2-inject-context)
-- [Step 3: Construct Review Prompt](#step-3-construct-review-prompt)
-- [Step 4: Fan Out to Star-Chamber](#step-4-fan-out-to-star-chamber)
-- [Step 5: Parse and Aggregate Results](#step-5-parse-and-aggregate-results)
-- [Step 6: Present Results to User](#step-6-present-results-to-user)
+- [Step 2: Gather Context](#step-2-gather-context)
+- [Step 3: Invoke Star-Chamber](#step-3-invoke-star-chamber)
+- [Step 4: Present Results to User](#step-4-present-results-to-user)
+- [Debate Mode](#debate-mode)
 - [Usage Examples](#usage-examples)
 - [Configuration](#configuration)
 - [Security Considerations](#security-considerations)
 - [Troubleshooting](#troubleshooting)
 - [Cost Warning](#cost-warning)
-- [Specification](#specification)
 
 ## Runtime Constraint
 
-**Each Bash tool invocation in Claude Code runs in a separate subprocess.** Shell variables do not persist between invocations. `$STAR_CHAMBER_PATH` must be set at the top of every bash block that references it. **Use `;` (not `&&`) to chain the assignment with subsequent commands** — `&&` breaks variable propagation in `bash -c` contexts.
+**Each Bash tool invocation in Claude Code runs in a separate subprocess.** Shell variables do not persist between invocations. **Use `;` (not `&&`) to chain variable assignments with subsequent commands** — `&&` breaks variable propagation in `bash -c` contexts.
+
+**Avoid pipelines (`|`) when shell variables are involved.** Some AI coding tool runtimes (including Claude Code as of March 2026) silently empty all `$VAR` expansions when a `|` appears in the command. Use temp files instead of pipes.
 
 `$STAR_CHAMBER_PATH` is set by the caller:
 - **Skill invocation:** The skill loader provides the base directory in the header. The skill sets `STAR_CHAMBER_PATH` to that directory.
 - **Agent invocation:** The agent discovers the path via Glob and sets `STAR_CHAMBER_PATH` to the directory containing PROTOCOL.md.
 
-**Avoid pipelines (`|`) when shell variables are involved.** Some AI coding tool runtimes (including Claude Code as of March 2026) silently empty all `$VAR` expansions when a `|` appears in the command. The `--input-file` flag on `llm_council.py` exists specifically to avoid `cat "$FILE" | uv run ...` patterns. Use `--input-file` instead of piping.
-
 `$PLUGIN_ROOT` can be derived from `$STAR_CHAMBER_PATH` as `$STAR_CHAMBER_PATH/../..` when needed (e.g., to access reference configs). Validate the derivation by checking that `$PLUGIN_ROOT/.claude-plugin/plugin.json` exists before using it.
+
+**CLI invocation:** Star-chamber is a PyPI package with a CLI entry point. Use `uvx` to run it in an isolated environment:
+
+```bash
+uvx star-chamber <command> [options] [arguments]
+```
+
+`uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
+
+**Platform mode requires extra packages.** The any-llm routing layer needs each provider's SDK installed in the same environment. When using platform mode (`"platform": "any-llm"` in config), add `--with` flags for the platform client and each provider SDK:
+
+```bash
+uvx --with any-llm-platform-client --with anthropic --with google-genai star-chamber <command> [options] [arguments]
+```
+
+Direct key mode (no platform) still requires provider SDKs but they are pulled in transitively by `any-llm`. Only platform mode needs the explicit `--with` flags.
 
 ## Step 0: Check Prerequisites
 
@@ -45,11 +59,12 @@ CONFIG_PATH="${STAR_CHAMBER_CONFIG:-$HOME/.config/star-chamber/providers.json}"
 [[ -f "$CONFIG_PATH" ]] && echo "config:exists:$CONFIG_PATH" || echo "config:missing"
 ```
 
-**NEVER echo, log, or print API key values.** Only check presence:
+**Verify star-chamber is accessible:**
 ```bash
-[ -n "$ANY_LLM_KEY" ] && echo "key:set" || echo "key:unset"
+uvx star-chamber list-providers
 ```
-Do not use shell expansions like `${VAR:-default}` on key variables — these can leak the value when the variable is set.
+
+If this fails with a package resolution error, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall star-chamber list-providers`.
 
 **If uv is missing**, stop and show:
 ```
@@ -122,79 +137,17 @@ To set up manually later, see the Configuration section below or run /star-chamb
 
 ## Invocation Modes: Code Review vs Design Question
 
-Star-chamber supports two invocation modes. Determine which applies based on how it was invoked:
+Star-chamber supports two modes, each with its own CLI command:
 
-**Code review** (default): Invoked with no question, or with `--file` flags pointing to code. Follow Steps 1-6 as written below.
+**Code review** (default): Invoked with no question, or with `--file` flags pointing to code. Uses `uvx star-chamber review`. Follow all steps below.
 
-**Design question**: The user asked a question about architecture, design trade-offs, or approach (e.g., "should we use event sourcing or CRUD?", "what's the best way to structure auth?"). Skip Step 1 (no files to identify). In Step 2, still inject context. In Step 3, construct a design question prompt instead:
+**Design question**: The user asked a question about architecture, design trade-offs, or approach (e.g., "should we use event sourcing or CRUD?", "what's the best way to structure auth?"). Uses `uvx star-chamber ask`. Skip Step 1 (no files to identify). In Step 2, still gather context.
 
-```
-You are a senior software architect advising on design decisions.
-
-## Project Context
-{Injected project rules}
-{Architecture context if available}
-
-## Design Question
-{The user's question}
-
-## Advisory Focus
-1. Trade-offs: What are the pros and cons of each approach?
-2. Fit: Which approach best fits this project's existing patterns and constraints?
-3. Risk: What are the risks of each option? What could go wrong?
-4. Recommendation: What would you recommend and why?
-
-## Output Format
-Provide your advice as structured JSON:
-{
-  "provider": "your-name",
-  "recommendation": "Your recommended approach",
-  "approaches": [
-    {
-      "name": "Approach name",
-      "pros": ["..."],
-      "cons": ["..."],
-      "risk_level": "low|medium|high",
-      "fit_rating": "excellent|good|fair|poor"
-    }
-  ],
-  "summary": "One paragraph overall recommendation with reasoning"
-}
-```
-
-For design questions, Step 5 aggregation groups by approach recommendation rather than by file location. Step 6 output uses this format:
-
-```markdown
-## Star-Chamber Advisory
-
-**Question:** {the design question}
-**Providers:** {list of providers consulted}
-
-### Consensus Recommendation
-
-{If all providers agree on an approach, state it here}
-
-### Approaches Considered
-
-**{Approach name}** - Recommended by {N}/{M} providers
-- **Pros:** {merged pros}
-- **Cons:** {merged cons}
-- **Risk:** {risk level}
-
-### Dissenting Views
-
-{Any provider that recommended a different approach, with their reasoning}
-
-### Summary
-
-| Provider | Recommendation | Fit Rating |
-|----------|---------------|------------|
-| {name}   | {approach}    | {rating}   |
-
-**Overall:** {1-2 sentence synthesis}
-```
+The SDK handles prompt construction, fan-out to providers, response parsing, and consensus classification for both modes. This protocol handles target identification, context gathering, invocation, and result presentation.
 
 ## Step 1: Identify Review Targets
+
+*(Code review mode only. Skip for design questions.)*
 
 Determine what code to review:
 
@@ -209,9 +162,16 @@ Determine what code to review:
 
 Save the output as the file list for subsequent steps. Since each Bash tool invocation is isolated, you must re-derive or re-read file lists in each block that needs them (e.g., write to a temp file and read it back, or re-run the discovery command).
 
-## Step 2: Inject Context
+## Step 2: Gather Context
 
-Gather context to include with the review prompt:
+Gather project context into a temp file that will be passed to `star-chamber` via `--context-file`. The SDK injects this into the `## Project Context` section of its prompt template.
+
+Create a temp directory and context file:
+```bash
+SC_TMPDIR="$(mktemp -d)"; CONTEXT_FILE="$SC_TMPDIR/context.txt"; : > "$CONTEXT_FILE"; echo "$SC_TMPDIR"
+```
+
+**Capture the echoed path** — you must re-set `SC_TMPDIR` to this literal value in every subsequent bash block.
 
 **Project rules (if they exist):**
 
@@ -226,13 +186,8 @@ If no project rules directory exists, skip rule injection — star-chamber will 
 
 The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules at the platform level — the skill does not need to parse `opencode.json` directly.
 
-For parallel (non-debate) mode, create `SC_TMPDIR` here so rules can be persisted for Step 3: `SC_TMPDIR="$(mktemp -d)"`. In debate mode, `SC_TMPDIR` is created in Step 4 — set it there instead.
-
 ```bash
-# Re-derive the review target file list (each Bash invocation is isolated).
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="$(mktemp -d)"
-RULES_FILE="$SC_TMPDIR/rules.txt"
-: > "$RULES_FILE"
+SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"
 
 FILES="$(
   ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null \
@@ -241,7 +196,6 @@ FILES="$(
   | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)'
 )"
 
-# Load project rules, filtering by path scope, and persist for Step 3.
 RULE_DIR=".claude/rules"
 if [[ -d "$RULE_DIR" ]]; then
   for f in "$RULE_DIR"/*.md; do
@@ -250,13 +204,13 @@ if [[ -d "$RULE_DIR" ]]; then
 
     # Always include universal and local-supplements (not path-scoped).
     if [[ "$basename" == "universal.md" ]] || [[ "$basename" == "local-supplements.md" ]]; then
-      cat "$f" >> "$RULES_FILE"
+      cat "$f" >> "$CONTEXT_FILE"
       continue
     fi
 
     # If no paths: frontmatter, treat as global — always include.
     if ! grep -q '^paths:' "$f"; then
-      cat "$f" >> "$RULES_FILE"
+      cat "$f" >> "$CONTEXT_FILE"
       continue
     fi
 
@@ -286,7 +240,7 @@ if [[ -d "$RULE_DIR" ]]; then
     done < <(awk '/^paths:[[:space:]]*$/{p=1;next} p&&/^[[:space:]]*-[[:space:]]/{gsub(/^[[:space:]]*-[[:space:]]*/,"",$0);print;next} p{exit}' "$f")
 
     if $matched; then
-      cat "$f" >> "$RULES_FILE"
+      cat "$f" >> "$CONTEXT_FILE"
     fi
   done
 else
@@ -296,176 +250,196 @@ fi
 
 **Architecture context (if exists):**
 ```bash
-[[ -f ARCHITECTURE.md ]] && cat ARCHITECTURE.md
+SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"
+[[ -f ARCHITECTURE.md ]] && cat ARCHITECTURE.md >> "$CONTEXT_FILE"
 ```
 
-## Step 3: Construct Review Prompt
+## Step 3: Invoke Star-Chamber
 
-Build a structured prompt for Star-Chamber. Use the example template pattern below and adapt or extend its sections as needed when constructing the prompt.
+The SDK handles prompt construction, fan-out to all configured providers, response parsing, and consensus classification. Pass the context file from Step 2 and request JSON output.
 
-The JSON output formats expected from providers are defined in `spec/council-protocol/SPEC.md`. Relevant schemas:
-- `spec/council-protocol/schemas/code-review-result.schema.json`
-- `spec/council-protocol/schemas/design-advice-result.schema.json`
-
-**Prompt construction:** Write the prompt to a temp file using `cat >` with a single-quoted heredoc for the static template, then append dynamic content (file contents, rules) with `cat >>`. Single-quoted heredocs (`<< 'EOF'`) prevent shell expansion, which is what you want for the template — but it also means `$VARIABLE` references inside the heredoc are passed as literal text, not expanded. Append dynamic content separately.
-
-`SC_TMPDIR` was created in Step 2 (parallel mode) or Step 4 (debate mode). Re-set it at the top of each bash block since variables do not persist between invocations.
-
-Example:
+**Code review:**
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; PROMPT_FILE="$SC_TMPDIR/prompt.txt"; cat > "$PROMPT_FILE" << 'EOF'
-You are a senior software craftsman reviewing code for quality, idioms, and architectural soundness.
-
-## Project Context
-EOF
-# Append project rules collected in Step 2 (if any).
-cat "$SC_TMPDIR/rules.txt" >> "$PROMPT_FILE" 2>/dev/null
-cat "ARCHITECTURE.md" >> "$PROMPT_FILE" 2>/dev/null
-printf '\n## Code to Review\n' >> "$PROMPT_FILE"
-for f in file1.py file2.py; do printf '\n### %s\n' "$f"; cat "$f"; done >> "$PROMPT_FILE"
-cat >> "$PROMPT_FILE" << 'EOF'
-
-## Review Focus
-1. Craftsmanship: Is this idiomatic, clean, well-structured?
-2. Architecture: Does this fit the project's patterns? Any design concerns?
-3. Correctness: Any logical issues, edge cases, or bugs?
-4. Invariants: Do classifications (terminal, final, immutable) match runtime reality? Are there states where cleanup or cancellation is assumed but not enforced? Does the code's model of the system match what actually happens?
-5. Maintainability: Will this be easy to understand and modify later?
-
-## Output Format
-Provide your review as structured JSON:
-{
-  "provider": "your-name",
-  "quality_rating": "excellent|good|fair|needs-work",
-  "issues": [
-    {
-      "severity": "high|medium|low",
-      "location": "file:line",
-      "category": "craftsmanship|architecture|correctness|invariants|maintainability",
-      "description": "What is wrong",
-      "suggestion": "How to fix it"
-    }
-  ],
-  "praise": ["What is done well"],
-  "summary": "One paragraph overall assessment"
-}
-EOF
+SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
 ```
 
-Then pass the assembled file to `llm_council.py` in Step 4:
+**Design question:**
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" --input-file "$SC_TMPDIR/prompt.txt" [--provider <name>...] [--file <path>...]
+SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
 ```
 
-## Step 4: Fan Out to Star-Chamber
+**Important:** Keep the `uvx` command on a **single line**. Do NOT use `\` line continuations — they break under Claude Code's Bash tool.
 
-Use `uv run --project "$STAR_CHAMBER_PATH" --isolated` to execute scripts with dependencies pinned in the star-chamber `pyproject.toml`, fully isolated from the host project's environment. The `--project` flag points `uv` at the star-chamber directory's `pyproject.toml` (not the host project's). The `--isolated` flag prevents `uv` from reusing an active virtual environment (via `VIRTUAL_ENV`) or a `.venv` directory found in the current or parent directories — without it, host project packages leak into `sys.path`. Do not use `uvx` — it runs CLI tools from PyPI (similar to `npx`), not project scripts with local file paths.
+**Important:** Do NOT redirect stderr into the output file (no `2>&1`). `uv` prints install messages to stderr which would corrupt the JSON output. Only redirect stdout when saving to a file.
 
-First, determine which SDK packages are needed:
+### JSON Output Structure
 
+**Code review** (`mode: "code-review"`) output fields:
+- `consensus_issues` — issues all providers agree on (address first).
+- `majority_issues` — issues flagged by 2+ providers (includes `flagged_by` list).
+- `individual_issues` — issues from single providers, keyed by provider name.
+- `quality_ratings` — per-provider quality assessment (keyed by provider name).
+- `reviews` — full individual provider reviews with `raw_content`.
+- `failed_providers` — providers that errored (with error messages).
+- `summary` — aggregated summary.
+
+**Design question** (`mode: "design-question"`) output fields:
+- `prompt` — the original question.
+- `approaches` — aggregated approaches with `name`, `pros`, `cons`, `risk_level`, `fit_rating`, `recommended_by` count.
+- `consensus_recommendation` — recommendation all providers agreed on (if any).
+- `failed_providers` — providers that errored.
+- `summary` — aggregated summary.
+
+For full schema details: `uvx star-chamber schema code-review-result` or `uvx star-chamber schema design-advice-result`. List all schemas with `uvx star-chamber schema list`.
+
+### Clean Up
+
+After results are presented, remove the temp directory:
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; uv run --project "$STAR_CHAMBER_PATH" --isolated "$STAR_CHAMBER_PATH/llm_council.py" --list-sdks
+SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 ```
 
-This outputs JSON with `required_sdks` array listing needed packages (e.g., `["anthropic", "google-genai"]`).
+## Step 4: Present Results to User
 
-**Execution modes:**
+Parse the JSON output from Step 3 and present using the appropriate format below. Do NOT include raw JSON in the terminal summary — the markdown formats below are for human consumption.
 
-| Mode     | Invocation            | Flow                                        | Use Case                          |
-|----------|-----------------------|---------------------------------------------|-----------------------------------|
-| Parallel | (default)             | All providers review independently at once  | Fast consensus gathering          |
-| Debate   | `--debate --rounds N` | Multiple rounds with summarization between  | Deep deliberation, refining ideas |
+### Code Review Format
 
-### Parallel Mode (default)
+```markdown
+## Star-Chamber Review
 
-The simplest approach: all providers review independently in a single round.
+**Files:** {list of files reviewed}
+**Providers:** {providers_used from JSON}
 
-Execute a single parallel review. Pass the prompt file (built in Step 3) to `llm_council.py`:
+### Consensus Issues (All Providers Agree)
 
-```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<set by caller>"; uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" --input-file "$SC_TMPDIR/prompt.txt" [--provider <name>...] [--file <path>...]
+These issues were flagged by every council member. Address these first.
+
+1. `{location}` **[{severity}]** ({category}) - {description}
+   - **Suggestion:** {suggestion}
+
+### Majority Issues ({N}/{M} Providers)
+
+These issues were flagged by most council members.
+
+1. `{location}` **[{severity}]** ({category}) — flagged by {flagged_by} - {description}
+   - **Suggestion:** {suggestion}
+
+### Individual Observations
+
+Issues raised by a single provider. May be valid specialized insights.
+
+- **{Provider}:** `{location}` - {description}
+
+### Summary
+
+| Provider | Quality Rating | Issues Found |
+|----------|---------------|--------------|
+| {name}   | {rating}      | {count}      |
+
+**Overall:** {summary from JSON}
 ```
 
-**Important:** The `uv run` command and all its arguments must be on a **single line**. Do NOT use `\` line continuations — they break under Claude Code's Bash tool. The core `any-llm-sdk` is pinned via `pyproject.toml`. Provider-specific SDKs (from `--list-sdks` output's `required_sdks` array) are added as `--with <sdk>` flags (e.g., `--with anthropic --with google-genai`).
+### Design Question Format
 
-**Important:** Do NOT redirect stderr into the output file (no `2>&1`). `uv` prints install messages to stderr (e.g., `Installed 22 packages in 27ms`) which would corrupt the JSON output. Only redirect stdout.
+```markdown
+## Star-Chamber Advisory
 
-```text
-Prompt → [Provider A] ──→ Response A
-      → [Provider B] ──→ Response B    (all at once, independent)
-      → [Provider C] ──→ Response C
+**Question:** {prompt from JSON}
+**Providers:** {providers_used from JSON}
+
+### Consensus Recommendation
+
+{consensus_recommendation from JSON, if present}
+
+### Approaches Considered
+
+**{name}** — Recommended by {recommended_by} provider(s)
+- **Pros:** {pros}
+- **Cons:** {cons}
+- **Risk:** {risk_level}
+- **Fit:** {fit_rating}
+
+### Summary
+
+**Overall:** {summary from JSON}
 ```
 
-### Debate Mode
+**Presentation guidelines:**
+- Always lead with consensus issues — these are the most actionable.
+- Include the suggestion from providers when available.
+- Note which providers flagged majority issues for context.
+- Keep the summary concise — users want to know what to fix.
+- If `failed_providers` is non-empty, note which providers failed and why.
 
-For deeper deliberation, debate mode runs multiple rounds where providers respond to each other's feedback.
+## Debate Mode
 
-You orchestrate the debate loop. The Python script handles parallel fan-out/fan-in for each round; you handle summarization between rounds.
+For deeper deliberation, debate mode runs multiple rounds where providers respond to each other's feedback. The caller orchestrates the debate loop; the SDK handles single-round execution.
 
-**Note:** Debate mode involves multiple rounds of LLM calls, increasing both cost and response time compared to parallel mode.
+**Note:** Debate mode involves multiple rounds of LLM calls, increasing both cost and response time.
 
-**Debate flow:**
+### Persisting Round Results
 
-```text
-Round 1: Fan out original prompt to all providers (parallel)
-         ↓
-         Collect responses: R1_A, R1_B, R1_C, ...
-         ↓
-For each subsequent round (2 to N):
-         ↓
-    Create ONE anonymous summary of ALL responses from the previous round
-         ↓
-    Build new prompt: original + "Other council members said: {summary}"
-         ↓
-    Fan out to all providers in parallel (single llm_council.py call)
-         ↓
-    Collect responses: RN_A, RN_B, RN_C, ...
-         ↓
-Final: Use last round responses for consensus building
-```
+Context compaction can fire between rounds and destroy previous responses. Persist each round's results to a per-run temp directory.
 
-**Persisting round results:**
-
-Context compaction can fire between rounds and destroy previous round responses. To prevent data loss, persist each round's results to a per-run temp directory.
-
-Before the first round, create the fixed parent directory and a unique run subdirectory, then inform the user:
+Before the first round, create the fixed parent directory and a unique run subdirectory:
 ```bash
 SC_PARENT="${TMPDIR:-/tmp}/star-chamber"; mkdir -p "$SC_PARENT"; chmod 700 "$SC_PARENT"; SC_TMPDIR=$(mktemp -d "$SC_PARENT/run-XXXXXX"); echo "$SC_TMPDIR"
 ```
 
-**Capture the echoed path** (e.g. `/tmp/star-chamber/run-KdkPeA`) — you must re-set `SC_TMPDIR` to this literal value in every subsequent bash block, since shell variables do not persist between Bash tool invocations.
+**Capture the echoed path** (e.g. `/tmp/star-chamber/run-KdkPeA`) and re-set `SC_TMPDIR` to this literal value in every subsequent bash block (see [Runtime Constraint](#runtime-constraint)).
 
 Tell the user: _"Debate mode will read and write round results in `<resolved SC_PARENT path>`. Approve access to this directory to avoid repeated prompts."_ Use the resolved value of `$SC_PARENT` (e.g. `/tmp/star-chamber`) so the path the user sees matches the actual permission prompt.
 
-The fixed parent path lets the user grant blanket Bash permission once, while the unique `run-XXXXXX` subdirectory keeps concurrent star-chamber sessions isolated from each other. The `chmod 700` ensures only the current user can access the directory.
+The fixed parent path lets the user grant blanket Bash permission once, while the unique `run-XXXXXX` subdirectory keeps concurrent star-chamber sessions isolated. The `chmod 700` ensures only the current user can access the directory.
 
-For each round, redirect `llm_council.py` stdout directly to a round file instead of capturing in a shell variable. **Re-set both `STAR_CHAMBER_PATH` and `SC_TMPDIR`** at the top of every bash block — they do not persist between invocations:
+### Gathering Context for Debate
+
+Gather context as in Step 2, but write to the debate temp directory:
 ```bash
-STAR_CHAMBER_PATH="<set by caller>"; SC_TMPDIR="<literal path from mktemp output>"; uv run --project "$STAR_CHAMBER_PATH" --isolated [--with <sdk>...] "$STAR_CHAMBER_PATH/llm_council.py" --input-file "$SC_TMPDIR/prompt.txt" > "$SC_TMPDIR/round-1.json"
+SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"; : > "$CONTEXT_FILE"
+```
+
+Then run the same rule-loading and architecture-context logic from Step 2, writing to `$CONTEXT_FILE`.
+
+### Debate Flow
+
+```text
+Round 1: uvx star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
+         ↓
+         Read round-1.json, create anonymous synthesis
+         ↓
+For each subsequent round (2 to N):
+         ↓
+    Write synthesis to $SC_TMPDIR/council-context.txt
+         ↓
+    uvx star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
+         ↓
+Final: Use last round's JSON for presentation (Step 4)
+```
+
+### Round Execution
+
+For each round, redirect stdout to a round file:
+```bash
+SC_TMPDIR="<literal path>"; uvx star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
 ```
 
 Do NOT redirect stderr into the round file (no `2>&1`) — `uv` prints install messages to stderr which would corrupt the JSON.
 
 Before starting round N+1, read back round N results from the temp file rather than relying on conversation context:
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; cat "$SC_TMPDIR/round-1.json"
+SC_TMPDIR="<literal path>"; cat "$SC_TMPDIR/round-1.json"
 ```
 
 This ensures the anonymous synthesis step has access to the actual provider responses even if compaction occurred between rounds.
 
-Clean up the temp directory after the final round is complete and results have been presented:
-```bash
-SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
-```
+### Anonymous Synthesis
 
-**Round 1:** Call llm_council.py with the original prompt (all providers, parallel).
-
-**Round 2+:** Create ONE anonymous summary of all responses from the previous round, then call llm_council.py again with the augmented prompt. All providers receive the same summary - this maintains parallel execution and aligns with the anonymous synthesis approach.
-
-**Summarization (anonymous synthesis):** When summarizing for the next round, synthesize feedback by content themes WITHOUT attributing specific points to individual providers. Present the collective feedback anonymously, focusing on consolidating similar concerns and highlighting areas of agreement or disagreement. This encourages providers to engage with ideas rather than sources. Example:
+When summarizing for the next round, synthesize feedback by content themes WITHOUT attributing specific points to individual providers. Present the collective feedback anonymously, focusing on consolidating similar concerns and highlighting areas of agreement or disagreement. This encourages providers to engage with ideas rather than sources. Example:
 
 ```text
-"## Other council members' feedback (round 1):
+## Other council members' feedback (round 1):
 
 **Issues raised:**
 - The config loader silently ignores missing env vars, risking runtime errors
@@ -476,95 +450,40 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 - Type hints are solid
 - Overall code structure is clean
 
-Please provide your perspective on these points. Note where you agree, disagree, or have additional insights."
+Please provide your perspective on these points. Note where you agree, disagree, or have additional insights.
 ```
 
-**Error handling:** If a provider fails during a round, continue with the remaining providers. Note failed providers in the final output but do not block the debate.
+Write the synthesis to `$SC_TMPDIR/council-context.txt` for the next round.
 
-**Convergence check:** If responses in round N are substantively the same as round N-1 (providers just agree with no new points), you may stop early. This is optional - completing all requested rounds is also acceptable.
+### Error Handling and Convergence
 
-**Prompt construction:** Build the prompt as a temp file (see Step 3), then pass it via `--input-file "$SC_TMPDIR/prompt.txt"`. Never store the prompt in a shell variable — file contents and special characters will break expansion.
+**Error handling:** If a provider fails during a round, continue with remaining providers. Note failed providers in the final output but do not block the debate.
 
-**Important:** Keep the entire `uv run` command on one line. The core `any-llm-sdk` is resolved from `pyproject.toml`; provider SDKs are added via `--with` flags from the `--list-sdks` output. Each `--with` must be a separate argument.
+**Convergence check:** If responses in round N are substantively the same as round N-1 (providers just agree with no new points), you may stop early. This is optional — completing all requested rounds is also acceptable.
 
-## Step 5: Parse and Aggregate Results
+### Clean Up
 
-The response parsing algorithm and consensus classification rules are formally specified in `spec/council-protocol/SPEC.md` (sections *Response Parsing* and *Consensus Classification*). The steps below summarize the implementation.
-
-For each successful provider response:
-
-1. **Extract JSON** from the response. Providers often wrap JSON in markdown code blocks like ` ```json {...} ``` `. Extract the JSON object. If parsing fails, note the provider as having a malformed response.
-
-2. **Normalize issues** by location and category to enable grouping.
-
-3. **Group issues by similarity**:
-   - Same file + same line range + same category = likely same issue
-   - Similar descriptions across providers = same underlying concern
-
-4. **Classify by agreement** (mutually exclusive buckets):
-   - **Consensus** (all providers flagged it): Highest confidence
-   - **Majority** (2+ providers, but not all): High confidence
-   - **Individual** (1 provider only): Note but lower confidence
-
-## Step 6: Present Results to User
-
-Present the aggregated results using this format. Always show consensus issues first. The output schema and markdown presentation templates are defined in `spec/council-protocol/SPEC.md` (section *Output Format*).
-
-```markdown
-## Star-Chamber Review
-
-**Files:** {list of files reviewed}
-**Providers:** {list of providers used}
-
-### Consensus Issues (All Providers Agree)
-
-These issues were flagged by every council member. Address these first.
-
-1. `{file}:{line}` **[{SEVERITY}]** - {description}
-   - **Suggestion:** {how to fix}
-
-### Majority Issues ({N}/{M} Providers)
-
-These issues were flagged by most council members.
-
-1. `{file}:{line}` **[{SEVERITY}]** ({which providers}) - {description}
-   - **Suggestion:** {how to fix}
-
-### Individual Observations
-
-Issues raised by a single provider. May be valid specialized insights.
-
-- **{Provider}:** `{location}` - {observation}
-
-### Summary
-
-| Provider | Quality Rating | Issues Found |
-|----------|---------------|--------------|
-| {name}   | {rating}      | {count}      |
-
-**Overall:** {1-2 sentence synthesis of the review}
+After presenting final results, clean up the temp directory:
+```bash
+SC_TMPDIR="<literal path>"; rm -rf "$SC_TMPDIR"
 ```
-
-**Important:**
-- Always lead with consensus issues - these are the most actionable
-- Include the suggestion/fix from providers when available
-- Note which providers flagged majority issues for context
-- Keep the summary concise - users want to know what to fix
-- Do NOT include raw JSON output in the terminal summary - the markdown format above is for human consumption
 
 ## Usage Examples
 
 ```bash
-# Basic - review recent changes with default providers (parallel, single round).
+# Basic — review recent changes with all configured providers.
 /star-chamber
 
 # Specific files and providers.
 /star-chamber --file backend/app/auth.py --provider openai --provider anthropic
 
-# Debate mode - 2 rounds (default) where each provider sees others' responses.
+# Design question.
+/star-chamber "Should we use Redis or Memcached for session storage?"
+
+# Debate mode — 2 rounds (default) where each provider sees others' responses.
 /star-chamber --debate
 
-# Debate mode - 3 rounds of deliberation.
+# Debate mode — 3 rounds of deliberation.
 /star-chamber --debate --rounds 3
 
 # Debate with specific files.
@@ -573,26 +492,33 @@ Issues raised by a single provider. May be valid specialized insights.
 
 ## Configuration
 
-The provider configuration schema is formally specified in `spec/council-protocol/SPEC.md` (section *Provider Configuration*). Relevant schemas:
-- `spec/council-protocol/schemas/provider-config.schema.json`
-- `spec/council-protocol/schemas/council-config.schema.json`
-
-Provider configuration is read from `~/.config/star-chamber/providers.json`.
+Provider configuration is read from `~/.config/star-chamber/providers.json`. Override with `STAR_CHAMBER_CONFIG` environment variable.
 
 The reference configuration with current models is maintained at `reference/star-chamber/providers.json` in the pragma plugin. Update models there and re-run `generate_config.py` with `--platform` or `--direct` to propagate changes to your local config.
 
-Override config path with `STAR_CHAMBER_CONFIG` environment variable.
+### Schemas
+
+The SDK ships the council protocol schemas as package data:
+
+```bash
+# List available schemas.
+uvx star-chamber schema list
+
+# Print a specific schema.
+uvx star-chamber schema council-config
+uvx star-chamber schema code-review-result
+```
 
 ### Provider fields
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `provider` | yes | Provider name (e.g., `openai`, `anthropic`, `llamafile`, `ollama`) |
-| `model` | yes | Model identifier |
+| `provider` | yes | Provider name (e.g., `openai`, `anthropic`, `llamafile`, `ollama`). |
+| `model` | yes | Model identifier. |
 | `api_key` | no | API key or `${ENV_VAR}` reference. Omit for platform mode or keyless local providers. |
-| `max_tokens` | no | Max response tokens (default: 16384) |
-| `api_base` | no | Custom base URL. Use for local/self-hosted LLMs (llamafile, ollama, vLLM, LocalAI, lmstudio). Omit for cloud providers — the SDK uses built-in defaults. |
-| `local` | no | Set to `true` for local/self-hosted providers (default: `false`). See [Platform mode and local providers](#platform-mode-and-local-providers) for behavioral details. |
+| `max_tokens` | no | Max response tokens (default: 16384). |
+| `api_base` | no | Custom base URL for local/self-hosted LLMs. Omit for cloud providers — the SDK uses built-in defaults. |
+| `local` | no | Set to `true` for local/self-hosted providers (default: `false`). See [Platform mode and local providers](#platform-mode-and-local-providers). |
 
 ### Local/self-hosted LLM examples
 
@@ -622,19 +548,18 @@ Cloud-hosted providers do not need `api_base` or `local` — omit both fields.
 
 When `platform: "any-llm"` is configured, the council fetches API keys from the any-llm platform for each provider. Providers marked `local: true` get special treatment:
 
-- **Key fetch tolerant:** If the platform has no key for a local provider, the council proceeds with an empty key instead of failing. A warning is logged to stderr.
-- **Network fault tolerant:** If the platform is unreachable or returns an unexpected error, local providers still proceed. Non-local providers fail fast.
-- **Auth error guidance:** If a local provider returns an auth error at call time, the error message suggests adding the key to the any-llm platform project or setting `api_key` directly in `providers.json`.
-- **Diagnostic output:** `--list-sdks` reports local providers under `providers_local`, not `providers_missing_key`.
+- **Key fetch tolerant:** If the platform has no key for a local provider, the council proceeds with an empty key instead of failing.
+- **Network fault tolerant:** If the platform is unreachable, local providers still proceed. Non-local providers fail fast.
+- **Auth error guidance:** If a local provider returns an auth error, the error message suggests adding the key to the any-llm platform or setting `api_key` directly in `providers.json`.
 
-Local providers can still use keys: if the platform has a key stored for a local provider (e.g., llamafile behind a reverse proxy with auth), it will be fetched and used normally. The `local` flag only affects the *failure* path.
+Local providers can still use keys: if the platform has a key stored for a local provider, it will be fetched and used normally. The `local` flag only affects the *failure* path.
 
 ## Using any-llm.ai Managed Platform (Optional)
 
 Instead of setting individual API keys, you can use the [any-llm.ai](https://any-llm.ai) managed platform for:
-- **Centralized key management** - Store provider keys securely (encrypted client-side)
-- **Usage tracking** - Automatic cost and token tracking across all providers
-- **Single authentication** - One `ANY_LLM_KEY` instead of multiple provider keys
+- **Centralized key management** — Store provider keys securely (encrypted client-side).
+- **Usage tracking** — Automatic cost and token tracking across all providers.
+- **Single authentication** — One `ANY_LLM_KEY` instead of multiple provider keys.
 
 ### Platform Setup
 
@@ -656,16 +581,10 @@ Instead of setting individual API keys, you can use the [any-llm.ai](https://any
 ### What Gets Tracked
 
 The platform tracks **metadata only** (never prompts/responses):
-- Provider and model used
-- Token counts (input/output)
-- Request timestamps
-- Cost estimates
-
-### Platform Config Example
-
-Same as the reference config but with `"platform": "any-llm"` added and `api_key` fields removed — the library fetches keys from the platform automatically. The setup flow handles this transformation.
-
-Note: `api_key` fields are omitted - the library fetches them from the platform automatically.
+- Provider and model used.
+- Token counts (input/output).
+- Request timestamps.
+- Cost estimates.
 
 ## Security Considerations
 
@@ -682,7 +601,6 @@ Note: `api_key` fields are omitted - the library fetches them from the platform 
 
 **Error Output:**
 - API keys are automatically redacted from error messages (patterns: `sk-*`, `ANY.v1.*`, etc.).
-- The `--list-sdks` command shows whether keys are set, not their values.
 
 ## Troubleshooting
 
@@ -690,66 +608,41 @@ Note: `api_key` fields are omitted - the library fetches them from the platform 
 
 **Authentication failed for {provider}:**
 ```json
-{"provider": "openai", "success": false, "error": "Authentication failed for openai. Check OPENAI_API_KEY is set and valid."}
+{"provider": "openai", "error": "Authentication failed for openai. Check OPENAI_API_KEY is set and valid."}
 ```
 - Verify the environment variable is set: `[ -n "$OPENAI_API_KEY" ] && echo "set" || echo "not set"`
-- Check if the key is valid (not expired or revoked)
+- Check if the key is valid (not expired or revoked).
 - For platform mode, verify `ANY_LLM_KEY` is set: `[ -n "$ANY_LLM_KEY" ] && echo "set" || echo "not set"`
 
 **Request timed out:**
 ```json
-{"provider": "gemini", "success": false, "error": "Request timed out after 60s"}
+{"provider": "gemini", "error": "Request timed out after 60s"}
 ```
-- Increase timeout via `--timeout 120` or in config `timeout_seconds`
-- Check network connectivity to the provider
+- Increase timeout via `--timeout 120` or in config `timeout_seconds`.
+- Check network connectivity to the provider.
 
-**Missing SDK:**
-```json
-{"provider": "anthropic", "success": false, "error": "Missing SDK for anthropic. Install with: pip install anthropic (or add '--with anthropic' to uv run)"}
+**Star-chamber not found:**
 ```
-- Run `--list-sdks` to see required packages
-- Add the missing SDK as a `--with <sdk>` flag to the `uv run` command
-
-**Provider not in sdk_map:**
-```text
-[star-chamber] Provider custom-llm not in sdk_map, assuming OpenAI-compatible
+error: No executables are provided by package `star-chamber`
 ```
-- This is a warning, not an error. Unknown providers are assumed to use the OpenAI-compatible API.
-- If your provider needs a specific SDK, add it to `sdk_map.json`
+- Verify the package exists on PyPI: `pip index versions star-chamber`
+- Try `uvx --reinstall star-chamber list-providers` to clear the cache.
 
 ### Partial Failures
 
-When some providers succeed and others fail, the output includes both:
+When some providers succeed and others fail, the JSON output includes `failed_providers` alongside successful results. The review continues with available providers. Check `failed_providers` for details.
 
-```json
-{
-  "reviews": [
-    {"provider": "openai", "model": "gpt-4o", "success": true, "content": "..."}
-  ],
-  "failed_reviews": [
-    {"provider": "anthropic", "model": "claude-sonnet-4-20250514", "success": false, "error": "Request timed out after 60s"}
-  ],
-  "providers_used": ["openai", "anthropic"]
-}
+### Checking Provider Status
+
+```bash
+uvx star-chamber list-providers
 ```
 
-The review continues with available providers. Check `failed_reviews` for details on failures.
-
-### Debate Convergence
-
-In debate mode, the council may exit early if responses stabilize:
-```text
-[star-chamber] Debate converged after round 3
-```
-
-This means all successful providers gave the same responses in consecutive rounds. Providers that failed or timed out are excluded from convergence detection and listed under `failed_reviews`. The output will include `"converged": true`.
+This shows all configured providers, their models, and connection status (direct, platform, or local).
 
 ## Cost Warning
 
 Each invocation calls all configured providers. With 3 providers reviewing ~2000 tokens:
-- ~$0.02-0.10 per invocation depending on models
+- ~$0.02-0.10 per invocation depending on models.
 - Basic mode (no debate) is used when auto-invoked to keep costs predictable.
-
-## Specification
-
-The portable council protocol (invocation modes, prompt templates, response parsing, consensus classification, and output format) is formally specified in `spec/council-protocol/SPEC.md` with JSON schemas and worked examples. This PROTOCOL.md contains the Claude Code-specific orchestration implementation — Bash subprocess isolation, `uv run` invocation, temp file management, and setup wizard flow. As a rule of thumb: if it affects interoperability or wire format, it belongs in the spec; if it concerns Claude Code runtime or tooling constraints, it belongs here.
+- Debate mode multiplies cost by the number of rounds.

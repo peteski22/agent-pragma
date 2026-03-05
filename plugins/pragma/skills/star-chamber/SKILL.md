@@ -19,11 +19,10 @@ Advisory skill that fans out code reviews and design questions to multiple LLM p
 | `--provider <name>` | LLM provider to use (repeatable, e.g., `--provider openai --provider gemini`). Defaults to all in config. | No |
 | `--file <path>` | Specify file to review (repeatable). Defaults to recent git changes. | No |
 | `--timeout <seconds>` | Timeout per provider request (overrides config `timeout_seconds`). | No |
-| `--list-sdks` | Show configured providers, which have API keys set, and required SDK packages. Diagnostic only. | No |
-| `--debate` | Enable debate mode: multiple rounds with summarization between rounds | **Yes** |
-| `--rounds N` | Number of debate rounds (default: 2, requires --debate) | **Yes** |
+| `--debate` | Enable debate mode: multiple rounds with summarization between rounds. | **Yes** |
+| `--rounds N` | Number of debate rounds (default: 2, requires --debate). | **Yes** |
 
-**Manual-only flags** are skill invocation parameters interpreted by Claude Code, NOT flags passed to `llm_council.py`. Debate mode is orchestrated by Claude Code (see Step 4 in the protocol).
+**Manual-only flags** are skill invocation parameters interpreted by Claude Code, NOT flags passed to the star-chamber CLI. Debate mode is orchestrated by Claude Code (see Debate Mode in the protocol).
 
 ## Path Setup
 
@@ -36,7 +35,7 @@ STAR_CHAMBER_PATH="<base directory from header>"
 
 ## Protocol
 
-Read and follow the full protocol from `$STAR_CHAMBER_PATH/PROTOCOL.md`. It contains Steps 0-6: prerequisite checks, invocation mode detection (code review vs design question), review target identification, context injection, prompt construction, fan-out to providers, result aggregation, and presentation.
+Read and follow the full protocol from `$STAR_CHAMBER_PATH/PROTOCOL.md`. It contains Steps 0-4: prerequisite checks, invocation mode detection (code review vs design question), review target identification, context gathering, CLI invocation, and result presentation. Debate mode is documented as a separate section.
 
 ## Auto-Invocation
 
