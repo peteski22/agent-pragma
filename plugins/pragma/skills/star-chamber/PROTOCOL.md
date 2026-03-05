@@ -47,7 +47,7 @@ uvx star-chamber <command> [options] [arguments]
 uvx --with any-llm-platform-client --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
-Direct key mode (no platform) still requires provider SDKs but they are pulled in transitively by `any-llm`. Only platform mode needs the explicit `--with` flags.
+**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. Other providers (Anthropic, Gemini, Cohere, etc.) are optional extras. In direct key mode, add `--with` flags for each non-OpenAI provider you use. In platform mode, also add `--with any-llm-platform-client`.
 
 ## Step 0: Check Prerequisites
 
@@ -153,25 +153,28 @@ Determine what code to review:
 
 **If `--file` arguments provided**, use those files as the review targets.
 
-**Otherwise, use recent changes:**
+**Otherwise, use recent changes.** Write the file list to a temp file so subsequent steps can read it back (shell variables do not persist between Bash tool invocations). Use a separate block for the pipeline to avoid the pipe-breaks-variable-expansion runtime constraint:
+
 ```bash
-# Get recently changed files (committed, then staged, then unstaged).
-# Filter out generated/vendor files.
-( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || git diff --name-only --diff-filter=ACMRT ) | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)'
+SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
 ```
 
-Save the output as the file list for subsequent steps. Since each Bash tool invocation is isolated, you must re-derive or re-read file lists in each block that needs them (e.g., write to a temp file and read it back, or re-run the discovery command).
+**Capture the echoed path** and re-set `SC_TMPDIR` in every subsequent block.
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || git diff --name-only --diff-filter=ACMRT ) | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)' > "$SC_TMPDIR/files.txt"
+```
+
+The file list at `$SC_TMPDIR/files.txt` is used by Step 2 for path-scoped rule matching and by Step 3 as review targets.
 
 ## Step 2: Gather Context
 
-Gather project context into a temp file that will be passed to `star-chamber` via `--context-file`. The SDK injects this into the `## Project Context` section of its prompt template.
+Gather project context into a temp file that will be passed to `star-chamber` via `--context-file`. The SDK injects this into the `## Project Context` section of its prompt template. Use the `$SC_TMPDIR` created in Step 1.
 
-Create a temp directory and context file:
+Create the context file:
 ```bash
-SC_TMPDIR="$(mktemp -d)"; CONTEXT_FILE="$SC_TMPDIR/context.txt"; : > "$CONTEXT_FILE"; echo "$SC_TMPDIR"
+SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"; : > "$CONTEXT_FILE"
 ```
-
-**Capture the echoed path** — you must re-set `SC_TMPDIR` to this literal value in every subsequent bash block.
 
 **Project rules (if they exist):**
 
@@ -187,14 +190,7 @@ If no project rules directory exists, skip rule injection — star-chamber will 
 The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules at the platform level — the skill does not need to parse `opencode.json` directly.
 
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"
-
-FILES="$(
-  ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null \
-    || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null \
-    || git diff --name-only --diff-filter=ACMRT ) \
-  | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)'
-)"
+SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"; FILES_LIST="$SC_TMPDIR/files.txt"
 
 RULE_DIR=".claude/rules"
 if [[ -d "$RULE_DIR" ]]; then
@@ -235,7 +231,7 @@ if [[ -d "$RULE_DIR" ]]; then
           matched=true
           break
         fi
-      done <<< "$FILES"
+      done < "$FILES_LIST"
       $matched && break
     done < <(awk '/^paths:[[:space:]]*$/{p=1;next} p&&/^[[:space:]]*-[[:space:]]/{gsub(/^[[:space:]]*-[[:space:]]*/,"",$0);print;next} p{exit}' "$f")
 
