@@ -309,7 +309,7 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 
 ## Step 4: Present Results to User
 
-Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the markdown formats below are for human consumption.
+Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the Markdown formats below are for human consumption.
 
 ### Code Review Format
 
