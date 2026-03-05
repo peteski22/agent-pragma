@@ -55,7 +55,7 @@ Install the plugin:
 
 ## Protocol
 
-Read and follow the full protocol from `$STAR_CHAMBER_PATH/PROTOCOL.md`. It contains Steps 0-6: prerequisite checks, invocation mode detection (code review vs design question), review target identification, context injection, prompt construction, fan-out to providers, result aggregation, and presentation.
+Read and follow the full protocol from `$STAR_CHAMBER_PATH/PROTOCOL.md`. It contains Steps 0-4: prerequisite checks, invocation mode detection (code review vs design question), review target identification, context gathering, CLI invocation, and result presentation.
 
 ## Arguments
 
@@ -66,7 +66,6 @@ When invoked with arguments, interpret these flags:
 | `--provider <name>` | LLM provider to use (repeatable). Defaults to all in config. |
 | `--file <path>` | Specify file to review (repeatable). Defaults to recent git changes. |
 | `--timeout <seconds>` | Timeout per provider request. |
-| `--list-sdks` | Show configured providers and required SDK packages. |
 
 ## Memory
 
