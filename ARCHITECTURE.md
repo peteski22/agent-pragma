@@ -603,7 +603,7 @@ The skill has `model-invocable: false` — it only fires on explicit user reques
 
 **Key characteristics:**
 - Advisory only (doesn't block like validators)
-- Uses `any-llm-sdk` via `uv run` (no global Python install needed)
+- Uses `any-llm-sdk` via `uvx` (no global Python install needed)
 - Supports parallel and debate review modes, plus design questions
 - Persistent project memory for learning codebase patterns across reviews (agent only)
 
