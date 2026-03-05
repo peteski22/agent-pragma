@@ -23,9 +23,14 @@
 
 ## Runtime Constraint
 
-**Each Bash tool invocation in Claude Code runs in a separate subprocess.** Shell variables do not persist between invocations. **Use `;` (not `&&`) to chain variable assignments with subsequent commands** — `&&` breaks variable propagation in `bash -c` contexts.
+**Each Bash tool invocation in Claude Code runs in a separate subprocess.** Shell variables do not persist between invocations. **Use `;` (not `&&`) to chain variable assignments with subsequent commands in single-line invocations** — `&&` breaks variable propagation in `bash -c` contexts. Multi-line code blocks within a single Bash tool invocation naturally preserve variables.
 
 **Avoid pipelines (`|`) when shell variables are involved.** Some AI coding tool runtimes (including Claude Code as of March 2026) silently empty all `$VAR` expansions when a `|` appears in the command. Use temp files instead of pipes.
+
+**Cross-invocation file access rules:**
+- **Reading** artifacts from prior Bash invocations (result JSON, synthesis files): Use the **Read tool** with a literal path. Do NOT use `cat`, `python3 -c`, or shell commands — these trigger permission prompts.
+- **Writing** to the temp directory: Use **Bash** (`cat > file << 'EOF'`, redirection). The user has already approved the temp directory. Do NOT use the Write tool — it triggers a file-creation permission prompt for paths outside the project.
+- **Within a single invocation:** Shell file manipulation (`cat`, `grep`, `awk`) is fine — the restriction applies to cross-invocation references only.
 
 `$STAR_CHAMBER_PATH` is set by the caller:
 - **Skill invocation:** The skill loader provides the base directory in the header. The skill sets `STAR_CHAMBER_PATH` to that directory.
@@ -162,7 +167,12 @@ SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
 **Capture the echoed path** and re-set `SC_TMPDIR` in every subsequent block.
 
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || git diff --name-only --diff-filter=ACMRT ) | grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)' > "$SC_TMPDIR/files.txt"
+SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || git diff --name-only --diff-filter=ACMRT ) > "$SC_TMPDIR/raw-files.txt"
+```
+
+Then filter in a separate command (avoids pipeline + variable expansion):
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)' "$SC_TMPDIR/raw-files.txt" > "$SC_TMPDIR/files.txt" || true
 ```
 
 The file list at `$SC_TMPDIR/files.txt` is used by Step 2 for path-scoped rule matching and by Step 3 as review targets.
@@ -264,6 +274,8 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber review --context
 SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
 ```
 
+**Non-debate mode:** Do NOT redirect stdout to a file — the JSON is consumed directly from the Bash tool response in Step 4.
+
 **Important:** Keep the `uvx` command on a **single line**. Do NOT use `\` line continuations — they break under Claude Code's Bash tool.
 
 **Important:** Do NOT redirect stderr into the output file (no `2>&1`). `uv` prints install messages to stderr which would corrupt the JSON output. Only redirect stdout when saving to a file.
@@ -297,7 +309,7 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 
 ## Step 4: Present Results to User
 
-Parse the JSON output from Step 3 and present using the appropriate format below. Do NOT include raw JSON in the terminal summary — the markdown formats below are for human consumption.
+Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the Markdown formats below are for human consumption.
 
 ### Code Review Format
 
@@ -403,15 +415,15 @@ Then run the same rule-loading and architecture-context logic from Step 2, writi
 ```text
 Round 1: uvx star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
          ↓
-         Read round-1.json, create anonymous synthesis
+         Use Read tool on round-1.json, create anonymous synthesis
          ↓
 For each subsequent round (2 to N):
          ↓
-    Write synthesis to $SC_TMPDIR/council-context.txt
+    Write synthesis to $SC_TMPDIR/council-context.txt via Bash heredoc
          ↓
     uvx star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
          ↓
-Final: Use last round's JSON for presentation (Step 4)
+Final: Use Read tool on last round's JSON for presentation (Step 4)
 ```
 
 ### Round Execution
@@ -423,10 +435,7 @@ SC_TMPDIR="<literal path>"; uvx star-chamber review --context-file "$SC_TMPDIR/c
 
 Do NOT redirect stderr into the round file (no `2>&1`) — `uv` prints install messages to stderr which would corrupt the JSON.
 
-Before starting round N+1, read back round N results from the temp file rather than relying on conversation context:
-```bash
-SC_TMPDIR="<literal path>"; cat "$SC_TMPDIR/round-1.json"
-```
+Before starting round N+1, use the **Read tool** to read back round N results from the temp file (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-1.json`), rather than relying on conversation context or shell commands.
 
 This ensures the anonymous synthesis step has access to the actual provider responses even if compaction occurred between rounds.
 
@@ -449,7 +458,13 @@ When summarizing for the next round, synthesize feedback by content themes WITHO
 Please provide your perspective on these points. Note where you agree, disagree, or have additional insights.
 ```
 
-Write the synthesis to `$SC_TMPDIR/council-context.txt` for the next round.
+Write the synthesis to `council-context.txt` in the run directory via **Bash** (the user has already approved the temp directory). Do NOT use the Write tool — it triggers a separate file-creation permission prompt for paths outside the project directory.
+
+```bash
+SC_TMPDIR="<literal path>"; cat > "$SC_TMPDIR/council-context.txt" << 'SYNTHESIS'
+<paste the anonymous synthesis here>
+SYNTHESIS
+```
 
 ### Error Handling and Convergence
 
