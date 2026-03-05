@@ -9,7 +9,7 @@
       "name": "pragma",
       "source": "./plugins/pragma",
       "description": "Deterministic linting hooks, semantic code validators, and a multi-LLM advisory council. Enforces coding rules mechanically — not by suggestion.",
-      "version": "3.2.0",
+      "version": "3.2.1",
       "category": "development",
       "tags": ["validation", "code-quality", "go", "python", "typescript", "security", "linting", "llm-council"]
     }
