@@ -254,8 +254,11 @@ agent-pragma/
 │       ├── skills/             # Skills shared by Claude Code and OpenCode
 │       ├── claude-md/
 │       │   ├── universal/      # Universal rules for all projects
-│       │   └── languages/      # Language-specific rules (go, python, typescript)
-│       ├── reference/          # Template configs (golangci-lint, providers.json)
+│       │   └── languages/      # Language-specific rules and setup metadata
+│       │       ├── go/         # go.md (rules) + setup.md (lint config detection)
+│       │       ├── python/     # python.md (rules) + setup.md (lint config detection)
+│       │       └── typescript/ # typescript.md (rules) + setup.md (lint config detection)
+│       ├── reference/          # Template configs (golangci-lint, pre-commit, biome, etc.)
 │       └── tools/              # go-structural deterministic linter
 ├── scripts/
 │   └── install.sh              # Install/uninstall for all agents

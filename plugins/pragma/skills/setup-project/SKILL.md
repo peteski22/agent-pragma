@@ -289,15 +289,19 @@ If `go` is not available or the build fails, note in Step 9 output that go-struc
 
 ## Step 8: Offer reference configs
 
-### Go linter config
+For each language detected in Step 2, read `$PLUGIN_ROOT/claude-md/languages/{lang}/setup.md` if it exists. This file defines:
 
-For Go projects, if no golangci-lint config exists:
-```bash
-test -f .golangci.yml || test -f .golangci.yaml || echo "no-lint-config"
-true
-```
+- **Lint Config Detection** — which config files to check for (any match means the project already has lint tooling configured).
+- **Reference Config** — which reference config to offer and where to copy it from (paths are relative to `$PLUGIN_ROOT`).
 
-If missing, offer to copy from `$PLUGIN_ROOT/reference/go/golangci-lint.yml`, replacing `{org}` and `{repo}`.
+For each language that has a `setup.md`:
+
+1. Read the file and extract the config filenames from the "Lint Config Detection" section.
+2. Check if any of those files exist in the project. Use glob matching for wildcard patterns (e.g., `.eslintrc.*`, `.prettierrc*`).
+3. If any config file exists, skip — the project already has lint tooling.
+4. If none exist, extract the reference config path from the "Reference Config" section and offer to copy from `$PLUGIN_ROOT/<path>`, replacing `{org}` and `{repo}` template variables with values from Step 1.
+
+Skip languages that have no `setup.md` file.
 
 ## Step 9: Output summary
 

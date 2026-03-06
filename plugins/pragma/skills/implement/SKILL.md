@@ -1,7 +1,6 @@
 ---
 name: implement
 description: Implement a feature or fix with automatic validation
-disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Task, WebFetch, WebSearch
 ---
 

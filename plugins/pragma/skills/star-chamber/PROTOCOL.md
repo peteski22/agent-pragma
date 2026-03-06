@@ -158,7 +158,7 @@ Determine what code to review:
 
 **If `--file` arguments provided**, use those files as the review targets.
 
-**Otherwise, use recent changes.** Write the file list to a temp file so subsequent steps can read it back (shell variables do not persist between Bash tool invocations). Use a separate block for the pipeline to avoid the pipe-breaks-variable-expansion runtime constraint:
+**Otherwise, use recent changes.** Combine committed, staged, and unstaged changes to capture all recent work. Write the file list to a temp file so subsequent steps can read it back (shell variables do not persist between Bash tool invocations). Use separate blocks to avoid the pipe-breaks-variable-expansion runtime constraint:
 
 ```bash
 SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
@@ -166,13 +166,18 @@ SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
 
 **Capture the echoed path** and re-set `SC_TMPDIR` in every subsequent block.
 
+Collect files from all change sources (committed + staged + unstaged):
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || git diff --name-only --diff-filter=ACMRT ) > "$SC_TMPDIR/raw-files.txt"
+SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
 ```
 
-Then filter in a separate command (avoids pipeline + variable expansion):
+Then filter and deduplicate in separate commands (avoids pipelines — see [Runtime Constraint](#runtime-constraint)):
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)' "$SC_TMPDIR/raw-files.txt" > "$SC_TMPDIR/files.txt" || true
+SC_TMPDIR="<literal path from mktemp output>"; grep -v -E '(node_modules|vendor|\.min\.|\.generated\.|__pycache__|\.pyc$)' "$SC_TMPDIR/raw-files.txt" > "$SC_TMPDIR/filtered.txt" || true
+```
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; sort -u "$SC_TMPDIR/filtered.txt" > "$SC_TMPDIR/files.txt"
 ```
 
 The file list at `$SC_TMPDIR/files.txt` is used by Step 2 for path-scoped rule matching and by Step 3 as review targets.
@@ -392,7 +397,7 @@ Context compaction can fire between rounds and destroy previous responses. Persi
 
 Before the first round, create the fixed parent directory and a unique run subdirectory:
 ```bash
-SC_PARENT="${TMPDIR:-/tmp}/star-chamber"; mkdir -p "$SC_PARENT"; chmod 700 "$SC_PARENT"; SC_TMPDIR=$(mktemp -d "$SC_PARENT/run-XXXXXX"); echo "$SC_TMPDIR"
+_tmpbase="${TMPDIR:-/tmp}"; SC_PARENT="${_tmpbase%/}/star-chamber"; mkdir -p "$SC_PARENT"; chmod 700 "$SC_PARENT"; SC_TMPDIR=$(mktemp -d "$SC_PARENT/run-XXXXXX"); echo "$SC_TMPDIR"
 ```
 
 **Capture the echoed path** (e.g. `/tmp/star-chamber/run-KdkPeA`) and re-set `SC_TMPDIR` to this literal value in every subsequent bash block (see [Runtime Constraint](#runtime-constraint)).

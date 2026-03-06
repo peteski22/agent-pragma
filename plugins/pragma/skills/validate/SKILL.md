@@ -1,7 +1,6 @@
 ---
 name: validate
 description: Run all validators against recent code changes
-disable-model-invocation: true
 allowed-tools: Task, Bash
 ---
 
@@ -11,9 +10,9 @@ Run all applicable validators against recent code changes.
 
 ## Step 1: Determine which validators to run
 
-Check what files have changed:
+Check what files have changed. Combine committed, staged, and unstaged changes to capture all recent work:
 ```bash
-git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null || git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null || git diff --name-only --diff-filter=ACMRT
+{ git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
 ```
 
 Based on file extensions, select validators:
