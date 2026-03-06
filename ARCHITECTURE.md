@@ -26,7 +26,7 @@ flowchart TB
     P3 --> Validators
     Report --> P4["Phase 4: Aggregate + format report"]
 
-    S["/setup-project"] --> SR["Creates project rule files (.claude/rules/*.md)"]
+    S["/setup-project"] --> SR["Creates project rule files (.claude/rules/*.md)<br/>Offers reference lint configs per language"]
     SR -.->|"enhances"| P0
     SR -.->|"enhances"| R
 ```
@@ -335,6 +335,8 @@ Validators use one of two internal structures for defining rules:
 
 Both patterns produce the same unified JSON output. The choice is an internal implementation detail of the validator.
 
+The same per-language file pattern is used by `/setup-project` for lint config detection. Each language directory in `claude-md/languages/{lang}/` contains a `setup.md` alongside the language rules file. The `setup.md` declares which lint config files to check for and which reference config to offer if none are found. This keeps language-specific setup knowledge in language files rather than hardcoded in the skill.
+
 ### Validator Dependency Chain
 
 Language-specific semantic validators require their linters to have passed first (tool dependency). Cross-language validators have no tool dependencies but are pipeline-gated — they run after linters pass as a convention for signal quality.
@@ -520,7 +522,7 @@ Phase 4 combines all validator results into a single output:
 
 | Scenario | Handling |
 |----------|----------|
-| First commit / no HEAD~1 | Fall back to staged files, then unstaged |
+| First commit / no HEAD~1 | HEAD~1 diff silently produces nothing; staged and unstaged changes are still captured |
 | Detached HEAD | Use `--diff-filter=ACMRT` to detect changes |
 | >50 files changed | Process in batches of 50, note batch number |
 | Conflicting rules | Prefer more specific rule, log in `rule_conflicts` array |

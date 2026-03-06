@@ -1,7 +1,6 @@
 ---
 name: validate
 description: Run all validators against recent code changes
-disable-model-invocation: true
 allowed-tools: Task, Bash
 ---
 

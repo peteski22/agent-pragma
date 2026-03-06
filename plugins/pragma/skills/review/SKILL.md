@@ -1,7 +1,6 @@
 ---
 name: review
 description: Review recent changes - run all validators and report status
-disable-model-invocation: true
 allowed-tools: Bash, Read, Glob, Grep, Task
 ---
 
