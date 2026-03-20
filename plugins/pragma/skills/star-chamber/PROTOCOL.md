@@ -46,13 +46,13 @@ uvx star-chamber <command> [options] [arguments]
 
 `uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
 
-**Platform mode requires extra packages.** The any-llm routing layer needs each provider's SDK installed in the same environment. When using platform mode (`"platform": "any-llm"` in config), add `--with` flags for the platform client and each provider SDK:
+**Platform mode requires the `[platform]` extra.** When using platform mode (`"platform": "any-llm"` in config), install star-chamber with the platform extra. Provider SDKs beyond OpenAI still need `--with` flags:
 
 ```bash
-uvx --with any-llm-platform-client --with anthropic --with google-genai star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[platform]' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
-**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. Other providers (Anthropic, Gemini, Cohere, etc.) are optional extras. In direct key mode, add `--with` flags for each non-OpenAI provider you use. In platform mode, also add `--with any-llm-platform-client`.
+**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. Other providers (Anthropic, Gemini, Cohere, etc.) are optional extras. Add `--with` flags for each non-OpenAI provider you use.
 
 ## Step 0: Check Prerequisites
 
@@ -69,7 +69,7 @@ CONFIG_PATH="${STAR_CHAMBER_CONFIG:-$HOME/.config/star-chamber/providers.json}"
 uvx star-chamber list-providers
 ```
 
-If this fails with a package resolution error, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall star-chamber list-providers`.
+If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall star-chamber list-providers` to refresh the cached environment.
 
 **If uv is missing**, stop and show:
 ```
