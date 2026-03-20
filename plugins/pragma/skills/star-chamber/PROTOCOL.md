@@ -69,7 +69,7 @@ CONFIG_PATH="${STAR_CHAMBER_CONFIG:-$HOME/.config/star-chamber/providers.json}"
 uvx star-chamber list-providers
 ```
 
-If this fails with a package resolution error, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall star-chamber list-providers`.
+If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall star-chamber list-providers` to refresh the cached environment.
 
 **If uv is missing**, stop and show:
 ```
