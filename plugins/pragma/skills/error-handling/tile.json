@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/error-handling",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Validate error handling completeness across languages",
+  "skills": {
+    "error-handling": {
+      "path": "SKILL.md"
+    }
+  }
+}

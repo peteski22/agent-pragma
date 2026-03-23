@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/go-proverbs",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Validate Go code changes against Go Proverbs",
+  "skills": {
+    "go-proverbs": {
+      "path": "SKILL.md"
+    }
+  }
+}

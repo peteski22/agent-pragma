@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/python-style",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Validate Python code against style and architectural conventions",
+  "skills": {
+    "python-style": {
+      "path": "SKILL.md"
+    }
+  }
+}

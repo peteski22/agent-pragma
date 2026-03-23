@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/setup-project",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Configure Claude Code for this project - detects languages and sets up rules, skills, and validators",
+  "skills": {
+    "setup-project": {
+      "path": "SKILL.md"
+    }
+  }
+}

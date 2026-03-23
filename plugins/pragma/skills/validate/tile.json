@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/validate",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Run all validators against recent code changes",
+  "skills": {
+    "validate": {
+      "path": "SKILL.md"
+    }
+  }
+}

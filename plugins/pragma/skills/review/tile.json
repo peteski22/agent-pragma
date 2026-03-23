@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/review",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Review recent changes - run all validators and report status",
+  "skills": {
+    "review": {
+      "path": "SKILL.md"
+    }
+  }
+}

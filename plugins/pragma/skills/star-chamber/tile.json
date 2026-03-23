@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/star-chamber",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Multi-LLM craftsmanship council with live progress and debate mode for code review and design questions",
+  "skills": {
+    "star-chamber": {
+      "path": "SKILL.md"
+    }
+  }
+}
