@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/security",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Check code changes for security vulnerabilities",
+  "skills": {
+    "security": {
+      "path": "SKILL.md"
+    }
+  }
+}
