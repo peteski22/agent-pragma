@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/typescript-style",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Validate TypeScript/React code against style and architectural conventions",
+  "skills": {
+    "typescript-style": {
+      "path": "SKILL.md"
+    }
+  }
+}
