@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/go-effective",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Validate Go code against Effective Go and idiomatic conventions",
+  "skills": {
+    "go-effective": {
+      "path": "SKILL.md"
+    }
+  }
+}
