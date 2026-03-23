@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/implement",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Implement a feature or fix with automatic validation",
+  "skills": {
+    "implement": {
+      "path": "SKILL.md"
+    }
+  }
+}
