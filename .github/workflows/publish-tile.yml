@@ -1,0 +1,22 @@
+name: Publish Tile
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: tesslio/publish@main
+        with:
+          token: ${{ secrets.TESSL_API_TOKEN }}
+          # path: './path/to/tile' # Optional, defaults to current directory
+          # review: 'true'          # Enable skill review quality gate (default: true)
+          # review-threshold: '50'  # Minimum score 0-100 to pass (default: 50)
