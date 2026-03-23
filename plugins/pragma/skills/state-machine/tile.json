@@ -1,0 +1,11 @@
+{
+  "name": "peteski22/state-machine",
+  "version": "0.1.0",
+  "private": false,
+  "summary": "Validate state machine and lifecycle correctness",
+  "skills": {
+    "state-machine": {
+      "path": "SKILL.md"
+    }
+  }
+}
