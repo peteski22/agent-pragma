@@ -107,7 +107,9 @@ Check for old-style assembled CLAUDE.md files from previous versions of `/setup-
 
 ```bash
 [[ -f .claude/CLAUDE.md ]] && echo "legacy:.claude/CLAUDE.md"
-find . -mindepth 2 -maxdepth 3 -name "CLAUDE.md" -path "*/.claude/CLAUDE.md" 2>/dev/null | while IFS= read -r f; do
+# maxdepth 4: a two-level-nested project's config is at sdk/go/.claude/CLAUDE.md
+# (depth 4) — one deeper than its language marker sdk/go/go.mod (depth 3).
+find . -mindepth 2 -maxdepth 4 -name "CLAUDE.md" -path "*/.claude/CLAUDE.md" 2>/dev/null | while IFS= read -r f; do
   echo "legacy:${f#./}"
 done
 true
