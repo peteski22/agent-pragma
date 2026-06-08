@@ -1,4 +1,21 @@
-"""Generate star-chamber provider config from reference file."""
+"""Generate star-chamber provider config from reference file.
+
+Two modes derive from a single direct-keys reference (providers.json):
+
+- ``--direct``  Per-provider API keys via ``${ENV_VAR}`` references (the
+                reference as-is). Non-OpenAI providers need their SDK at run
+                time (``uvx --with anthropic --with google-genai ...``).
+- ``--otari``   Route non-local providers through an Otari gateway: strip their
+                keys and prefix each model with its provider label
+                (``openai:gpt-4o``) per Otari's naming convention, then add a
+                top-level ``otari`` block. ``local: true`` providers bypass the
+                gateway and are left untouched. The block templates only
+                ``api_base``; ``api_key`` is omitted so the Otari client resolves
+                ``OTARI_API_KEY`` or falls back to ``OTARI_PLATFORM_TOKEN``.
+
+NOTE: the ``provider:model`` prefix follows Otari's documented convention; verify
+it against your gateway's docs if a provider rejects the model name.
+"""
 
 import argparse
 import json
@@ -9,8 +26,8 @@ import sys
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate star-chamber config.")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--platform", action="store_true", help="Platform mode (strips api_key fields).")
-    group.add_argument("--direct", action="store_true", help="Direct keys mode (strips platform field).")
+    group.add_argument("--otari", action="store_true", help="Otari gateway mode (routes all providers through Otari).")
+    group.add_argument("--direct", action="store_true", help="Direct keys mode (per-provider API keys).")
     args = parser.parse_args()
 
     ref_path = pathlib.Path(__file__).parent / "providers.json"
@@ -24,12 +41,26 @@ def main() -> None:
         print(f"Invalid JSON in reference file {ref_path}: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    if args.platform:
-        ref["providers"] = [
-            {k: v for k, v in p.items() if k != "api_key"} for p in ref["providers"]
-        ]
-    else:
-        ref.pop("platform", None)
+    if args.otari:
+        # Local providers bypass Otari (own route/key/model), so rewrite only
+        # the providers that route through the gateway and leave the rest as-is.
+        rewritten = []
+        for p in ref["providers"]:
+            if p.get("local", False):
+                rewritten.append(p)
+                continue
+            rewritten.append(
+                {
+                    **{k: v for k, v in p.items() if k != "api_key"},
+                    "model": f"{p['provider']}:{p['model']}",
+                }
+            )
+        ref["providers"] = rewritten
+        # Template only api_base; omit api_key so the Otari client resolves
+        # OTARI_API_KEY at runtime, or falls back to OTARI_PLATFORM_TOKEN for a
+        # hosted platform. A literal "${OTARI_API_KEY}" would expand to "" when
+        # unset and suppress that fallback.
+        ref["otari"] = {"api_base": "${OTARI_API_BASE}"}
 
     dest = pathlib.Path.home() / ".config" / "star-chamber" / "providers.json"
     try:

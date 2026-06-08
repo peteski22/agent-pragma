@@ -46,13 +46,15 @@ uvx star-chamber <command> [options] [arguments]
 
 `uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
 
-**Platform mode requires the `[platform]` extra.** When using platform mode (`"platform": "any-llm"` in config), install star-chamber with the platform extra. Provider SDKs beyond OpenAI still need `--with` flags:
+**Version:** This protocol targets star-chamber **0.2.x**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
+
+**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. In **direct** mode, each non-OpenAI provider (Anthropic, Gemini, Cohere, etc.) needs its SDK added via `--with` flags:
 
 ```bash
-uvx --from 'star-chamber[platform]' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
+uvx --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
-**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. Other providers (Anthropic, Gemini, Cohere, etc.) are optional extras. Add `--with` flags for each non-OpenAI provider you use.
+In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway, so no per-provider `--with` flags are required — plain `uvx star-chamber` is enough.
 
 ## Step 0: Check Prerequisites
 
@@ -85,32 +87,37 @@ See: https://docs.astral.sh/uv/getting-started/installation/
 
 **If config is missing**, ask how to manage API keys:
 
-```
+```text
 Star-Chamber requires provider configuration.
 
 How would you like to manage API keys?
 
-[any-llm.ai platform] - Single ANY_LLM_KEY, centralized key vault, usage tracking
+[Otari gateway] - Route all providers through an Otari gateway (OTARI_API_KEY, or OTARI_PLATFORM_TOKEN for a hosted platform)
 [Direct provider keys] - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY individually
 [Skip] - I'll set it up manually later
 ```
 
-**If user chooses "any-llm.ai platform":**
+**If user chooses "Otari gateway":**
 
 ```bash
 STAR_CHAMBER_PATH="<set by caller>"
-PLUGIN_ROOT="$STAR_CHAMBER_PATH/../.."; uv run --no-project --isolated "$PLUGIN_ROOT/reference/star-chamber/generate_config.py" --platform
+PLUGIN_ROOT="$STAR_CHAMBER_PATH/../.."; uv run --no-project --isolated "$PLUGIN_ROOT/reference/star-chamber/generate_config.py" --otari
 ```
 
 Then show:
-```
-Created ~/.config/star-chamber/providers.json (platform mode)
+```text
+Created ~/.config/star-chamber/providers.json (Otari gateway mode)
 
 Setup:
-  1. Create account at https://any-llm.ai
-  2. Create a project and add your provider API keys
-  3. Copy your project key and set:
-     export ANY_LLM_KEY="ANY.v1...."
+  1. Point at your Otari gateway:
+     export OTARI_API_BASE="https://your-gateway.example/v1"
+  2. Authenticate:
+     export OTARI_API_KEY="..."
+     # For a hosted Otari platform with Bearer-token auth, omit OTARI_API_KEY
+     # and set OTARI_PLATFORM_TOKEN instead.
+
+The generated config prefixes each model as provider:model (Otari's naming
+convention). Verify the prefixes against your gateway's docs.
 ```
 
 **If user chooses "Direct provider keys":**
@@ -121,7 +128,7 @@ PLUGIN_ROOT="$STAR_CHAMBER_PATH/../.."; uv run --no-project --isolated "$PLUGIN_
 ```
 
 Then show:
-```
+```text
 Created ~/.config/star-chamber/providers.json (direct keys mode)
 
 Set these environment variables:
@@ -134,7 +141,7 @@ Edit the config to remove providers you don't have keys for.
 
 **If user chooses "Skip":**
 
-```
+```text
 To set up manually later, see the Configuration section below or run /star-chamber again.
 ```
 
@@ -510,7 +517,7 @@ SC_TMPDIR="<literal path>"; rm -rf "$SC_TMPDIR"
 
 Provider configuration is read from `~/.config/star-chamber/providers.json`. Override with `STAR_CHAMBER_CONFIG` environment variable.
 
-The reference configuration with current models is maintained at `reference/star-chamber/providers.json` in the pragma plugin. Update models there and re-run `generate_config.py` with `--platform` or `--direct` to propagate changes to your local config.
+The reference configuration with current models is maintained at `reference/star-chamber/providers.json` in the pragma plugin. Update models there and re-run `generate_config.py` with `--otari` or `--direct` to propagate changes to your local config.
 
 ### Schemas
 
@@ -531,10 +538,10 @@ uvx star-chamber schema code-review-result
 |-------|----------|-------------|
 | `provider` | yes | Provider name (e.g., `openai`, `anthropic`, `llamafile`, `ollama`). |
 | `model` | yes | Model identifier. |
-| `api_key` | no | API key or `${ENV_VAR}` reference. Omit for platform mode or keyless local providers. |
+| `api_key` | no | API key or `${ENV_VAR}` reference. Omit for Otari mode or keyless local providers. |
 | `max_tokens` | no | Max response tokens (default: 16384). |
 | `api_base` | no | Custom base URL for local/self-hosted LLMs. Omit for cloud providers — the SDK uses built-in defaults. |
-| `local` | no | Set to `true` for local/self-hosted providers (default: `false`). See [Platform mode and local providers](#platform-mode-and-local-providers). |
+| `local` | no | Set to `true` for local/self-hosted providers (default: `false`). See [Otari mode and local providers](#otari-mode-and-local-providers). |
 
 ### Local/self-hosted LLM examples
 
@@ -560,47 +567,46 @@ uvx star-chamber schema code-review-result
 
 Cloud-hosted providers do not need `api_base` or `local` — omit both fields.
 
-### Platform mode and local providers
+### Otari mode and local providers
 
-When `platform: "any-llm"` is configured, the council fetches API keys from the any-llm platform for each provider. Providers marked `local: true` get special treatment:
+When a top-level `otari` object is configured, every **non-local** provider is dispatched through the Otari gateway: the call uses `provider="otari"` with Otari's shared `api_base`/`api_key`, and the per-provider `provider` field becomes a label. The `model` must use Otari's `provider:model` naming (e.g. `openai:gpt-4o`).
 
-- **Key fetch tolerant:** If the platform has no key for a local provider, the council proceeds with an empty key instead of failing.
-- **Network fault tolerant:** If the platform is unreachable, local providers still proceed. Non-local providers fail fast.
-- **Auth error guidance:** If a local provider returns an auth error, the error message suggests adding the key to the any-llm platform or setting `api_key` directly in `providers.json`.
+Providers marked `local: true` are treated differently:
 
-Local providers can still use keys: if the platform has a key stored for a local provider, it will be fetched and used normally. The `local` flag only affects the *failure* path.
+- **Always bypass Otari.** Local providers ignore the gateway and call their own `api_base` with their own `provider` and `api_key`, even when `otari` is set.
+- **Intended for self-hosted models** (Ollama, llamafile, etc.) that should not be routed through the gateway.
 
-## Using any-llm.ai Managed Platform (Optional)
+Auth failures are reported per route: gateway calls report that authentication failed at the Otari gateway, while local calls name the provider and point at its key.
 
-Instead of setting individual API keys, you can use the [any-llm.ai](https://any-llm.ai) managed platform for:
-- **Centralized key management** — Store provider keys securely (encrypted client-side).
-- **Usage tracking** — Automatic cost and token tracking across all providers.
-- **Single authentication** — One `ANY_LLM_KEY` instead of multiple provider keys.
+## Using an Otari Gateway (Optional)
 
-### Platform Setup
+Instead of setting individual provider API keys, you can route every non-local provider through [Otari](https://github.com/mozilla-ai/otari), Mozilla AI's OpenAI-compatible LLM gateway:
+- **Centralized key management** — Provider keys live at the gateway, not on each developer's machine.
+- **Single authentication** — One `OTARI_API_KEY` (or a hosted-platform Bearer token) instead of per-provider keys.
+- **Uniform routing** — Otari selects the upstream provider; star-chamber only needs the OpenAI-compatible client.
 
-1. Create account at https://any-llm.ai
-2. Create a project and add your provider API keys (OpenAI, Anthropic, Gemini, etc.)
-3. Copy your project key
-4. Set environment variable:
-   ```bash
-   export ANY_LLM_KEY="ANY.v1.abc123..."
-   ```
-5. Enable platform mode in your config (`~/.config/star-chamber/providers.json`):
+### Otari Setup
+
+1. Stand up or obtain access to an Otari gateway (see Otari's documentation).
+2. Generate an Otari-mode config (`~/.config/star-chamber/providers.json`) via Step 0, or add a top-level `otari` block by hand:
    ```json
    {
-     "platform": "any-llm",
-     ...
+     "providers": [
+       {"provider": "openai", "model": "openai:gpt-4o"},
+       {"provider": "anthropic", "model": "anthropic:claude-sonnet-4-20250514"}
+     ],
+     "otari": {"api_base": "${OTARI_API_BASE}"}
    }
    ```
+3. Point at the gateway and authenticate:
+   ```bash
+   export OTARI_API_BASE="https://your-gateway.example/v1"
+   export OTARI_API_KEY="..."
+   ```
 
-### What Gets Tracked
+`api_base`/`api_key` may be omitted from the config to resolve from the `OTARI_API_BASE`/`OTARI_API_KEY` environment variables. For a hosted Otari platform that uses Bearer-token auth, omit `OTARI_API_KEY` and set `OTARI_PLATFORM_TOKEN` instead — the Otari client detects it and switches to platform mode automatically.
 
-The platform tracks **metadata only** (never prompts/responses):
-- Provider and model used.
-- Token counts (input/output).
-- Request timestamps.
-- Cost estimates.
+Otari expects the `model` field in `provider:model` form; consult Otari's documentation for its exact naming convention. Providers marked `local: true` always bypass the gateway.
 
 ## Security Considerations
 
@@ -608,7 +614,7 @@ The platform tracks **metadata only** (never prompts/responses):
 - **Prefer environment variables** over hardcoding keys in the config file.
 - Use `${ENV_VAR}` syntax in config to reference environment variables.
 - Never commit `providers.json` with actual API keys to version control.
-- The any-llm.ai platform mode is recommended for team environments.
+- Otari gateway mode is recommended for team environments — provider keys stay at the gateway rather than on developer machines.
 
 **Key Handling:**
 - **Never echo, log, or print API key values** in shell commands or debug output.
@@ -616,7 +622,7 @@ The platform tracks **metadata only** (never prompts/responses):
 - Avoid shell expansions (`${VAR:-...}`, `${VAR:+...}`) on key variables in echo/print statements — these can leak values.
 
 **Error Output:**
-- API keys are automatically redacted from error messages (patterns: `sk-*`, `ANY.v1.*`, etc.).
+- API keys are automatically redacted from error messages (patterns: `Bearer ...`, `sk-*`, `key-*`, `api_key=...`, etc.).
 
 ## Troubleshooting
 
@@ -628,7 +634,7 @@ The platform tracks **metadata only** (never prompts/responses):
 ```
 - Verify the environment variable is set: `[ -n "$OPENAI_API_KEY" ] && echo "set" || echo "not set"`
 - Check if the key is valid (not expired or revoked).
-- For platform mode, verify `ANY_LLM_KEY` is set: `[ -n "$ANY_LLM_KEY" ] && echo "set" || echo "not set"`
+- For Otari mode, verify `OTARI_API_KEY` (or `OTARI_PLATFORM_TOKEN`) is set: `{ [ -n "$OTARI_API_KEY" ] || [ -n "$OTARI_PLATFORM_TOKEN" ]; } && echo "set" || echo "not set"`
 
 **Request timed out:**
 ```json
@@ -654,7 +660,7 @@ When some providers succeed and others fail, the JSON output includes `failed_pr
 uvx star-chamber list-providers
 ```
 
-This shows all configured providers, their models, and connection status (direct, platform, or local).
+This shows all configured providers, their models, and connection status (direct, otari, or local).
 
 ## Cost Warning
 

@@ -217,10 +217,11 @@ flowchart TD
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `STAR_CHAMBER_CONFIG` | No | Custom path to star-chamber config (default: `~/.config/star-chamber/providers.json`) |
-| `ANY_LLM_KEY` | For `/star-chamber` | Platform key from [any-llm.ai](https://any-llm.ai) |
-| `OPENAI_API_KEY` | For `/star-chamber` | OpenAI API key (if not using any-llm.ai) |
-| `ANTHROPIC_API_KEY` | For `/star-chamber` | Anthropic API key (if not using any-llm.ai) |
-| `GEMINI_API_KEY` | For `/star-chamber` | Google Gemini API key (if not using any-llm.ai) |
+| `OTARI_API_BASE` | For `/star-chamber` (Otari mode) | Base URL of your [Otari](https://github.com/mozilla-ai/otari) gateway |
+| `OTARI_API_KEY` | For `/star-chamber` (Otari mode) | Otari gateway API key (or set `OTARI_PLATFORM_TOKEN` for a hosted platform) |
+| `OPENAI_API_KEY` | For `/star-chamber` (direct mode) | OpenAI API key (if not routing through Otari) |
+| `ANTHROPIC_API_KEY` | For `/star-chamber` (direct mode) | Anthropic API key (if not routing through Otari) |
+| `GEMINI_API_KEY` | For `/star-chamber` (direct mode) | Google Gemini API key (if not routing through Otari) |
 
 ## Updating
 
