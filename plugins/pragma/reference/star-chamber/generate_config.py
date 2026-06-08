@@ -5,11 +5,13 @@ Two modes derive from a single direct-keys reference (providers.json):
 - ``--direct``  Per-provider API keys via ``${ENV_VAR}`` references (the
                 reference as-is). Non-OpenAI providers need their SDK at run
                 time (``uvx --with anthropic --with google-genai ...``).
-- ``--otari``   Route every provider through an Otari gateway: strip per-provider
-                keys, add a top-level ``otari`` block resolved from
-                ``OTARI_API_BASE``/``OTARI_API_KEY``, and prefix each model with
-                its provider label (``openai:gpt-4o``) per Otari's naming
-                convention.
+- ``--otari``   Route non-local providers through an Otari gateway: strip their
+                keys and prefix each model with its provider label
+                (``openai:gpt-4o``) per Otari's naming convention, then add a
+                top-level ``otari`` block. ``local: true`` providers bypass the
+                gateway and are left untouched. The block templates only
+                ``api_base``; ``api_key`` is omitted so the Otari client resolves
+                ``OTARI_API_KEY`` or falls back to ``OTARI_PLATFORM_TOKEN``.
 
 NOTE: the ``provider:model`` prefix follows Otari's documented convention; verify
 it against your gateway's docs if a provider rejects the model name.
@@ -40,17 +42,25 @@ def main() -> None:
         sys.exit(1)
 
     if args.otari:
-        ref["providers"] = [
-            {
-                **{k: v for k, v in p.items() if k != "api_key"},
-                "model": f"{p['provider']}:{p['model']}",
-            }
-            for p in ref["providers"]
-        ]
-        # Resolved from OTARI_API_BASE/OTARI_API_KEY at runtime; omit either to
-        # fall back to the environment, or set OTARI_PLATFORM_TOKEN for a hosted
-        # platform that uses Bearer-token auth.
-        ref["otari"] = {"api_base": "${OTARI_API_BASE}", "api_key": "${OTARI_API_KEY}"}
+        # Local providers bypass Otari (own route/key/model), so rewrite only
+        # the providers that route through the gateway and leave the rest as-is.
+        rewritten = []
+        for p in ref["providers"]:
+            if p.get("local", False):
+                rewritten.append(p)
+                continue
+            rewritten.append(
+                {
+                    **{k: v for k, v in p.items() if k != "api_key"},
+                    "model": f"{p['provider']}:{p['model']}",
+                }
+            )
+        ref["providers"] = rewritten
+        # Template only api_base; omit api_key so the Otari client resolves
+        # OTARI_API_KEY at runtime, or falls back to OTARI_PLATFORM_TOKEN for a
+        # hosted platform. A literal "${OTARI_API_KEY}" would expand to "" when
+        # unset and suppress that fallback.
+        ref["otari"] = {"api_base": "${OTARI_API_BASE}"}
 
     dest = pathlib.Path.home() / ".config" / "star-chamber" / "providers.json"
     try:

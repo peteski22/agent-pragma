@@ -87,12 +87,12 @@ See: https://docs.astral.sh/uv/getting-started/installation/
 
 **If config is missing**, ask how to manage API keys:
 
-```
+```text
 Star-Chamber requires provider configuration.
 
 How would you like to manage API keys?
 
-[Otari gateway] - Route all providers through an Otari gateway with a single OTARI_API_KEY
+[Otari gateway] - Route all providers through an Otari gateway (OTARI_API_KEY, or OTARI_PLATFORM_TOKEN for a hosted platform)
 [Direct provider keys] - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY individually
 [Skip] - I'll set it up manually later
 ```
@@ -105,7 +105,7 @@ PLUGIN_ROOT="$STAR_CHAMBER_PATH/../.."; uv run --no-project --isolated "$PLUGIN_
 ```
 
 Then show:
-```
+```text
 Created ~/.config/star-chamber/providers.json (Otari gateway mode)
 
 Setup:
@@ -128,7 +128,7 @@ PLUGIN_ROOT="$STAR_CHAMBER_PATH/../.."; uv run --no-project --isolated "$PLUGIN_
 ```
 
 Then show:
-```
+```text
 Created ~/.config/star-chamber/providers.json (direct keys mode)
 
 Set these environment variables:
@@ -141,7 +141,7 @@ Edit the config to remove providers you don't have keys for.
 
 **If user chooses "Skip":**
 
-```
+```text
 To set up manually later, see the Configuration section below or run /star-chamber again.
 ```
 
@@ -595,7 +595,7 @@ Instead of setting individual provider API keys, you can route every non-local p
        {"provider": "openai", "model": "openai:gpt-4o"},
        {"provider": "anthropic", "model": "anthropic:claude-sonnet-4-20250514"}
      ],
-     "otari": {"api_base": "${OTARI_API_BASE}", "api_key": "${OTARI_API_KEY}"}
+     "otari": {"api_base": "${OTARI_API_BASE}"}
    }
    ```
 3. Point at the gateway and authenticate:
@@ -634,7 +634,7 @@ Otari expects the `model` field in `provider:model` form; consult Otari's docume
 ```
 - Verify the environment variable is set: `[ -n "$OPENAI_API_KEY" ] && echo "set" || echo "not set"`
 - Check if the key is valid (not expired or revoked).
-- For Otari mode, verify `OTARI_API_KEY` (or `OTARI_PLATFORM_TOKEN`) is set: `[ -n "$OTARI_API_KEY" ] && echo "set" || echo "not set"`
+- For Otari mode, verify `OTARI_API_KEY` (or `OTARI_PLATFORM_TOKEN`) is set: `{ [ -n "$OTARI_API_KEY" ] || [ -n "$OTARI_PLATFORM_TOKEN" ]; } && echo "set" || echo "not set"`
 
 **Request timed out:**
 ```json
