@@ -1,5 +1,4 @@
 {
-  "platform": "any-llm",
   "providers": [
     {
       "provider": "openai",

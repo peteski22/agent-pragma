@@ -605,7 +605,7 @@ The skill has `model-invocable: false` — it only fires on explicit user reques
 
 **Key characteristics:**
 - Advisory only (doesn't block like validators)
-- Uses `any-llm-sdk` via `uvx` (no global Python install needed)
+- Uses `star-chamber` (built on `any-llm-sdk`) via `uvx` (no global Python install needed); providers run with direct keys or routed through an Otari gateway
 - Supports parallel and debate review modes, plus design questions
 - Persistent project memory for learning codebase patterns across reviews (agent only)
 
