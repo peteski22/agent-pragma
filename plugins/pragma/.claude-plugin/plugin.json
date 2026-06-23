@@ -1,6 +1,6 @@
 {
   "name": "pragma",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Deterministic linting hooks, semantic code validators, and a multi-LLM advisory council. Enforces coding rules mechanically — not by suggestion.",
   "author": { "name": "Peter Wilson" },
   "repository": "https://github.com/peteski22/agent-pragma",
