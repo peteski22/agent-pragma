@@ -117,6 +117,18 @@ true
 
 If any are found, read them. If they contain the `<!-- Assembled by /setup-project` marker, delete them — the new modular rules in `.claude/rules/` replace them. If they do not contain the marker (user-authored), warn the user and ask before removing.
 
+### 3c: Check for existing AGENTS.md and CLAUDE.md
+
+Check for existing top-level files and whether they contain a pragma-managed block:
+
+```bash
+[[ -f AGENTS.md ]] && echo "agents-md:exists" || echo "agents-md:missing"
+[[ -f CLAUDE.md ]] && echo "claude-md:exists" || echo "claude-md:missing"
+true
+```
+
+If either exists, read it. Check for the `<!-- pragma:start -->` marker — if present, the managed block will be replaced in-place. Content outside the markers is never modified.
+
 ## Step 4: Create .claude/rules/ files
 
 Create the directory:
@@ -251,34 +263,76 @@ Assemble each language rule file with:
 ```
 
 
-## Step 6: Create opencode.json for OpenCode compatibility
+## Step 6: Upsert AGENTS.md and CLAUDE.md blocks
 
-OpenCode uses `opencode.json` at the project root to load custom instructions. Create or update this file so OpenCode auto-loads the same `.claude/rules/*.md` files that Claude Code loads natively.
+Insert or update a **marker-delimited block** in each file. Content outside the markers is never touched — other tools and the user can add their own content freely.
+
+**Marker pair:**
+```
+<!-- pragma:start -->
+...managed content...
+<!-- pragma:end -->
+```
+
+**Upsert rules:**
+
+| File state | Action |
+|---|---|
+| File missing | Create with the block as the full body |
+| File exists, no `<!-- pragma:start -->` | Append block after a blank-line separator |
+| Block present but changed | Replace from start marker through end marker |
+| Block present and identical | No-op |
+| Start marker present without matching end marker | Skip and warn the user |
+
+### 6a: AGENTS.md
+
+Upsert the pragma block into `AGENTS.md` at the project root. The block contains one `@` import per rules file created in Steps 4–5. List universal first, then local-supplements, then language-specific files alphabetically.
+
+**Block content** (example for a Python + TypeScript project):
+
+```markdown
+<!-- pragma:start -->
+@.claude/rules/universal.md
+@.claude/rules/local-supplements.md
+@.claude/rules/python.md
+@.claude/rules/typescript.md
+<!-- pragma:end -->
+```
+
+Include only the files that were actually created — do not include imports for languages that were not detected.
+
+### 6b: CLAUDE.md
+
+Upsert the pragma block into `CLAUDE.md` at the project root. The block contains a single `@` import of AGENTS.md.
+
+**Block content:**
+
+```markdown
+<!-- pragma:start -->
+@./AGENTS.md
+<!-- pragma:end -->
+```
+
+## Step 7: Clean up opencode.json
+
+OpenCode reads `AGENTS.md` natively, so explicit `instructions` entries are no longer needed. This step only cleans up entries left by previous `/setup-project` runs.
 
 **Check for existing opencode.json:**
 ```bash
 test -f opencode.json && echo "opencode-json:exists" || echo "opencode-json:missing"
 ```
 
-**If missing**, create it:
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "instructions": [".claude/rules/*.md"]
-}
-```
+**If missing**, skip this step — do not create the file.
 
-**If it exists**, read it and merge the `instructions` field:
+**If it exists**, read it and check for stale instructions from a previous run:
 
-1. **Invalid JSON:** If the file cannot be parsed as valid JSON, back it up to `opencode.json.bak` and create a fresh `opencode.json` with the content above. Inform the user that the original was backed up.
-2. **`instructions` already contains `.claude/rules/*.md`:** No changes needed.
-3. **`instructions` exists and is an array but does not contain `.claude/rules/*.md`:** Append `.claude/rules/*.md` to the existing array.
-4. **`instructions` exists but is not an array** (e.g., a string): Convert it to an array containing the original value plus `.claude/rules/*.md`.
-5. **`instructions` field is missing:** Add it with `[".claude/rules/*.md"]`.
+1. **Invalid JSON:** Leave it alone. Warn the user that `opencode.json` is not valid JSON.
+2. **`instructions` contains `.claude/rules/*.md`:** Remove that entry. If the `instructions` array is now empty, remove the `instructions` field entirely.
+3. **No `.claude/rules/*.md` in `instructions`:** No changes needed.
 
 **Do not overwrite** other fields in an existing `opencode.json` (e.g., `model`, `provider`, `agent`).
 
-## Step 7: Verify plugin skills and agents
+## Step 8: Verify plugin skills and agents
 
 All skills and agents are provided by the pragma plugin — no symlinks needed.
 
@@ -287,7 +341,7 @@ All skills and agents are provided by the pragma plugin — no symlinks needed.
 command -v uv >/dev/null 2>&1 && echo "uv:ok" || echo "uv:missing"
 ```
 
-Store the result - if `uv:missing`, include a warning in Step 9 output.
+Store the result - if `uv:missing`, include a warning in Step 10 output.
 
 **Build go-structural (ONLY if Go was detected in Step 2):**
 
@@ -299,9 +353,9 @@ If and only if Go was detected (any line matching `*:go` in Step 2 output):
 cd "$PLUGIN_ROOT/tools/go-structural" && go build -o go-structural . && echo "go-structural:ok" || echo "go-structural:build-failed"
 ```
 
-If `go` is not available or the build fails, note in Step 9 output that go-structural is unavailable.
+If `go` is not available or the build fails, note in Step 10 output that go-structural is unavailable.
 
-## Step 8: Offer reference configs
+## Step 9: Offer reference configs
 
 For each language detected in Step 2, read `$PLUGIN_ROOT/claude-md/languages/{lang}/setup.md` if it exists. This file defines:
 
@@ -317,7 +371,7 @@ For each language that has a `setup.md`:
 
 Skip languages that have no `setup.md` file.
 
-## Step 9: Output summary
+## Step 10: Output summary
 
 ```
 ## Setup Complete
@@ -334,7 +388,8 @@ Skip languages that have no `setup.md` file.
   - .claude/rules/local-supplements.md
   - .claude/rules/python.md (scoped to backend/**)
   - .claude/rules/typescript.md (scoped to frontend/**)
-  - opencode.json (OpenCode instructions — loads .claude/rules/*.md)
+  - AGENTS.md (pragma block imports .claude/rules/*.md)
+  - CLAUDE.md (pragma block imports AGENTS.md)
 
 **Skills available (via pragma plugin):**
   - /implement - implement with auto-validation
@@ -366,6 +421,6 @@ Or see: https://docs.astral.sh/uv/getting-started/installation/
 Then continue with:
 ```
 **Recommended:**
-  - **Optional:** If you want other contributors to benefit from the same rules, commit the generated `.claude/rules/` files. Otherwise, add `.claude/rules/` to `.gitignore` to keep them local.
+  - **Optional:** If you want other contributors to benefit from the same rules, commit `AGENTS.md`, `CLAUDE.md`, and the generated `.claude/rules/` files. Otherwise, add them to `.gitignore` to keep them local.
   - `CLAUDE.local.md` has been created for personal/machine-specific rules (custom validation commands, local environment notes, personal workflow preferences). It is auto-loaded by Claude Code and gitignored.
 ```
