@@ -26,10 +26,10 @@ Collect the list of changed files and their directories.
 
 Collect project rules from the project's rule directory. Rule file locations vary by agent platform:
 - Claude Code: `.claude/rules/*.md`
-- OpenCode: files listed in `opencode.json` `instructions` array
+- OpenCode: `AGENTS.md` (auto-loaded natively)
 - Other agents: check agent documentation for project rule conventions
 
-For Claude Code, use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. OpenCode auto-loads rules from `opencode.json` at the platform level.
+For Claude Code, use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. OpenCode auto-loads rules from `AGENTS.md` at the platform level.
 
 **Path-scoped filtering:** Always include universal and local-supplements rule files. For files with `paths:` frontmatter, include only if at least one declared path pattern matches a changed file from Step 1. Files without `paths:` frontmatter are treated as global and always included. This prevents unrelated language rules from being applied (e.g., Go rules on a Python-only change).
 

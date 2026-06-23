@@ -119,7 +119,7 @@ If any are found, read them. If they contain the `<!-- Assembled by /setup-proje
 
 ### 3c: Check for existing AGENTS.md and CLAUDE.md
 
-Check for existing top-level files and whether they contain a pragma-managed block:
+Check for existing top-level files:
 
 ```bash
 [[ -f AGENTS.md ]] && echo "agents-md:exists" || echo "agents-md:missing"
@@ -127,7 +127,7 @@ Check for existing top-level files and whether they contain a pragma-managed blo
 true
 ```
 
-If either exists, read it. Check for the `<!-- pragma:start -->` marker — if present, the managed block will be replaced in-place. Content outside the markers is never modified.
+If either exists, read it and check for the `<!-- pragma:start -->` and `<!-- pragma:end -->` markers. If both markers are present, the managed block will be replaced in-place. If only the start marker is present without a matching end marker, skip the file and warn the user (same as Step 6's upsert rules). Content outside the markers is never modified.
 
 ## Step 4: Create .claude/rules/ files
 

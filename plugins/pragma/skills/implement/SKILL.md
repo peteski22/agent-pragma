@@ -28,10 +28,10 @@ If uncertain, err on the side of including more directories rather than fewer. E
 
 Collect project rules from the project's rule directory. Rule file locations vary by agent platform:
 - Claude Code: `.claude/rules/*.md`
-- OpenCode: files listed in `opencode.json` `instructions` array
+- OpenCode: `AGENTS.md` (auto-loaded natively)
 - Other agents: check agent documentation for project rule conventions
 
-For Claude Code, use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. OpenCode auto-loads rules from `opencode.json` at the platform level. Collect those that exist and are readable. A file is considered "found" only if it exists and can be successfully read.
+For Claude Code, use the Glob tool to discover `.claude/rules/*.md` files, then the Read tool to load them. OpenCode auto-loads rules from `AGENTS.md` at the platform level. Collect those that exist and are readable. A file is considered "found" only if it exists and can be successfully read.
 
 **Note:** Path-scoped rules (those with `paths:` frontmatter) may be auto-loaded by the agent platform only for matching files. When collecting rules manually, read the frontmatter and apply path-scoped rules only to the target directories they match.
 

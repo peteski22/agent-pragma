@@ -146,7 +146,8 @@ myproject/
 │       ├── local-supplements.md      # Documents CLAUDE.local.md usage
 │       ├── python.md                 # Python rules (scoped to backend/**)
 │       └── typescript.md             # TypeScript rules (scoped to frontend/**)
-├── opencode.json                     # OpenCode instructions (loads .claude/rules/*.md)
+├── AGENTS.md                          # Agent-agnostic entry point (imports .claude/rules/*.md)
+├── CLAUDE.md                          # Claude Code entry point (imports AGENTS.md)
 ├── CLAUDE.local.md                   # Personal supplements (gitignored)
 ├── backend/
 │   └── pyproject.toml
@@ -156,7 +157,7 @@ myproject/
 
 Language-specific rules use `paths:` frontmatter to scope them to matching files. When you edit `backend/app/main.py`, both `python.md` (scoped to `backend/**/*.py`) and `universal.md` are applied. `CLAUDE.local.md` at the project root is auto-loaded as per-user supplements.
 
-Both agents load rules from the same `.claude/rules/*.md` files — Claude Code natively, OpenCode via the `instructions` glob in `opencode.json`. This keeps a single source of truth for project rules.
+Both agents load rules from the same `.claude/rules/*.md` files — Claude Code via `CLAUDE.md` → `AGENTS.md`, OpenCode via `AGENTS.md` directly. This keeps a single source of truth for project rules.
 
 ### Version Control
 

@@ -555,7 +555,7 @@ All rules live in `.claude/rules/*.md` at the project root. Language-specific ru
 **How each agent loads rules:**
 
 - **Claude Code:** Auto-loads all `.claude/rules/*.md` files natively. No additional configuration needed.
-- **OpenCode:** Loads rules via the `instructions` glob in `opencode.json` at the project root. `/setup-project` generates this file with `{"instructions": [".claude/rules/*.md"]}`.
+- **OpenCode:** Auto-loads `AGENTS.md` at the project root, which imports `.claude/rules/*.md` via `@` directives. `/setup-project` manages this via a `<!-- pragma:start/end -->` block.
 
 For `/implement` and `/review`, rule injection is mechanical and explicit — the skills read `.claude/rules/*.md` directly. Both agents also auto-load these files for ad-hoc interactions outside the formal workflow.
 
