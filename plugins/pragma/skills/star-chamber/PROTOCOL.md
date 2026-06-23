@@ -202,14 +202,14 @@ SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.
 
 Load project rules, filtering path-scoped rules to only those relevant to the review target files (from Step 1). Rule file locations vary by agent platform:
 - Claude Code: `.claude/rules/*.md`
-- OpenCode: files listed in `opencode.json` `instructions` array
+- OpenCode: `AGENTS.md` (auto-loaded natively)
 - Other agents: check agent documentation for project rule conventions
 
 Always include universal and local-supplements rule files. For files with `paths:` frontmatter, include only if at least one declared path pattern matches a file in the review target list. Files without `paths:` frontmatter are treated as global and always included.
 
 If no project rules directory exists, skip rule injection — star-chamber will review without project-specific context.
 
-The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules at the platform level — the skill does not need to parse `opencode.json` directly.
+The following Bash example assumes the Claude Code layout (`.claude/rules/`). OpenCode and other agents auto-load rules from `AGENTS.md` at the platform level.
 
 ```bash
 SC_TMPDIR="<literal path from mktemp output>"; CONTEXT_FILE="$SC_TMPDIR/context.txt"; FILES_LIST="$SC_TMPDIR/files.txt"
