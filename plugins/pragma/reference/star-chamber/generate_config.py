@@ -10,8 +10,10 @@ Two modes derive from a single direct-keys reference (providers.json):
                 (``openai:gpt-4o``) per Otari's naming convention, then add a
                 top-level ``otari`` block. ``local: true`` providers bypass the
                 gateway and are left untouched. The block templates only
-                ``api_base``; ``api_key`` is omitted so the Otari client resolves
-                ``OTARI_API_KEY`` or falls back to ``OTARI_PLATFORM_TOKEN``.
+                ``api_base``; ``api_key`` is omitted so the SDK's OtariProvider
+                auto-detects credentials from its own env vars
+                (``OTARI_AI_TOKEN`` for platform, ``GATEWAY_API_KEY`` for
+                self-hosted).
 
 NOTE: the ``provider:model`` prefix follows Otari's documented convention; verify
 it against your gateway's docs if a provider rejects the model name.
@@ -56,10 +58,9 @@ def main() -> None:
                 }
             )
         ref["providers"] = rewritten
-        # Template only api_base; omit api_key so the Otari client resolves
-        # OTARI_API_KEY at runtime, or falls back to OTARI_PLATFORM_TOKEN for a
-        # hosted platform. A literal "${OTARI_API_KEY}" would expand to "" when
-        # unset and suppress that fallback.
+        # Template only api_base; omit api_key so the SDK's OtariProvider
+        # auto-detects credentials from its own env vars (OTARI_AI_TOKEN for
+        # platform mode, GATEWAY_API_KEY for self-hosted).
         ref["otari"] = {"api_base": "${OTARI_API_BASE}"}
 
     dest = pathlib.Path.home() / ".config" / "star-chamber" / "providers.json"
