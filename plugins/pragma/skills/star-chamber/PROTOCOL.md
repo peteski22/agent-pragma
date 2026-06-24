@@ -46,7 +46,7 @@ uvx star-chamber <command> [options] [arguments]
 
 `uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
 
-**Version:** This protocol targets star-chamber **0.2.x**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
+**Version:** This protocol targets star-chamber **0.3.x**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
 
 **Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. In **direct** mode, each non-OpenAI provider (Anthropic, Gemini, Cohere, etc.) needs its SDK added via `--with` flags:
 
@@ -92,7 +92,7 @@ Star-Chamber requires provider configuration.
 
 How would you like to manage API keys?
 
-[Otari gateway] - Route all providers through an Otari gateway (OTARI_API_KEY, or OTARI_PLATFORM_TOKEN for a hosted platform)
+[Otari gateway] - Route all providers through an Otari gateway (credentials auto-detected by the SDK)
 [Direct provider keys] - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY individually
 [Skip] - I'll set it up manually later
 ```
@@ -111,10 +111,10 @@ Created ~/.config/star-chamber/providers.json (Otari gateway mode)
 Setup:
   1. Point at your Otari gateway:
      export OTARI_API_BASE="https://your-gateway.example/v1"
-  2. Authenticate:
-     export OTARI_API_KEY="..."
-     # For a hosted Otari platform with Bearer-token auth, omit OTARI_API_KEY
-     # and set OTARI_PLATFORM_TOKEN instead.
+  2. Authenticate (the SDK auto-detects from its canonical env vars):
+     export OTARI_AI_TOKEN="..."        # hosted platform (Bearer-token auth)
+     # — or —
+     export GATEWAY_API_KEY="..."       # self-hosted gateway
 
 The generated config prefixes each model as provider:model (Otari's naming
 convention). Verify the prefixes against your gateway's docs.
@@ -582,7 +582,7 @@ Auth failures are reported per route: gateway calls report that authentication f
 
 Instead of setting individual provider API keys, you can route every non-local provider through [Otari](https://github.com/mozilla-ai/otari), Mozilla AI's OpenAI-compatible LLM gateway:
 - **Centralized key management** — Provider keys live at the gateway, not on each developer's machine.
-- **Single authentication** — One `OTARI_API_KEY` (or a hosted-platform Bearer token) instead of per-provider keys.
+- **Single authentication** — One credential (`OTARI_AI_TOKEN` or `GATEWAY_API_KEY`) instead of per-provider keys.
 - **Uniform routing** — Otari selects the upstream provider; star-chamber only needs the OpenAI-compatible client.
 
 ### Otari Setup
@@ -601,10 +601,12 @@ Instead of setting individual provider API keys, you can route every non-local p
 3. Point at the gateway and authenticate:
    ```bash
    export OTARI_API_BASE="https://your-gateway.example/v1"
-   export OTARI_API_KEY="..."
+   export OTARI_AI_TOKEN="..."        # hosted platform
+   # — or —
+   export GATEWAY_API_KEY="..."       # self-hosted gateway
    ```
 
-`api_base`/`api_key` may be omitted from the config to resolve from the `OTARI_API_BASE`/`OTARI_API_KEY` environment variables. For a hosted Otari platform that uses Bearer-token auth, omit `OTARI_API_KEY` and set `OTARI_PLATFORM_TOKEN` instead — the Otari client detects it and switches to platform mode automatically.
+`api_base` and `api_key` may be omitted from the config; when omitted, the SDK's `OtariProvider` auto-detects credentials from its own env vars (`OTARI_AI_TOKEN` for platform mode, `GATEWAY_API_KEY` for self-hosted). Both fields also support `${ENV_VAR}` references for explicit values.
 
 Otari expects the `model` field in `provider:model` form; consult Otari's documentation for its exact naming convention. Providers marked `local: true` always bypass the gateway.
 
@@ -634,7 +636,7 @@ Otari expects the `model` field in `provider:model` form; consult Otari's docume
 ```
 - Verify the environment variable is set: `[ -n "$OPENAI_API_KEY" ] && echo "set" || echo "not set"`
 - Check if the key is valid (not expired or revoked).
-- For Otari mode, verify `OTARI_API_KEY` (or `OTARI_PLATFORM_TOKEN`) is set: `{ [ -n "$OTARI_API_KEY" ] || [ -n "$OTARI_PLATFORM_TOKEN" ]; } && echo "set" || echo "not set"`
+- For Otari mode, verify credentials are set: `{ [ -n "$OTARI_AI_TOKEN" ] || [ -n "$GATEWAY_API_KEY" ]; } && echo "set" || echo "not set"`
 
 **Request timed out:**
 ```json
