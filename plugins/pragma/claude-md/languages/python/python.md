@@ -62,6 +62,7 @@ A service that only wraps single CRUD queries with no additional logic is a repo
 
 ## Validation Commands
 
-These commands are used by `/implement` and `/review` during validation. Override in `CLAUDE.local.md` if your project uses different scripts.
+These are fallback defaults used by `/implement` and `/review` when no Makefile target or `CLAUDE.local.md` override exists.
 
-- **Lint:** `uv run pre-commit run --all-files`
+- **Lint:** `make lint` (if Makefile with lint target exists) or `uv run pre-commit run --all-files`
+- **Test:** `make test` (if Makefile with test target exists) or `uv run pytest`
