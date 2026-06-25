@@ -60,7 +60,7 @@
 
 ## Validation Commands
 
-These commands are used by `/implement` and `/review` during validation. Override in `CLAUDE.local.md` if your project uses different scripts.
+These are fallback defaults used by `/implement` and `/review` when no Makefile target or `CLAUDE.local.md` override exists.
 
-- **Lint:** `pnpm run lint`
-- **Test:** `pnpm run test`
+- **Lint:** `make lint` (if Makefile with lint target exists) or `pnpm run lint`
+- **Test:** `make test` (if Makefile with test target exists) or `pnpm run test`

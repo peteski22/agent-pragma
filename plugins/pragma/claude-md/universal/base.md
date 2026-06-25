@@ -5,9 +5,23 @@ These rules apply to all projects regardless of language or framework.
 Rules are organized by timing: when they should be applied during the workflow.
 
 **Contents:**
+- [Decision Order](#decision-order) - Priority for all decisions
 - [Pre-Implementation Setup](#pre-implementation-setup) - Actions to execute before coding
 - [Implementation Guidelines](#implementation-guidelines) - Guidance to follow while coding
 - [Pre-Completion Guidelines](#pre-completion-guidelines) - Verify before marking done
+
+---
+
+## Decision Order
+
+Use this priority for all work:
+
+1. Correctness and safety
+2. Maintainability and clarity
+3. Developer velocity
+4. Performance optimization
+
+Never trade a higher priority for a lower one without discussing the trade-off with the user and getting explicit approval.
 
 ---
 
@@ -86,7 +100,9 @@ Checking if a directory exists tells you nothing about how code flows. Instead, 
 
 ### Research
 
-- Where possible, use WebSearch or WebFetch to lookup current documentation rather than relying on training data, especially for:
+- If CQ is available (as a skill, MCP server, or plugin), query it before starting work. CQ surfaces known pitfalls, integration gotchas, and undocumented quirks that training data misses.
+- Do not rely on training data for facts that can be verified. Look up current documentation, API references, and library versions rather than assuming recalled knowledge is correct. Training data may be outdated, incomplete, or confidently wrong.
+- Use WebSearch or WebFetch to look up current information, especially for:
   - Library/framework APIs that change frequently.
   - Cloud provider documentation (AWS, GCP, Azure).
   - Language features added recently.
@@ -104,6 +120,51 @@ Follow these while writing code.
 - Avoid over-engineering. Only make changes that are directly requested or necessary.
 - Do not add features, refactor code, or make "improvements" beyond what was asked.
 - Keep solutions simple and focused.
+- Handle error paths intentionally; do not swallow errors.
+- Runtime-visible strings (error messages, log lines, wire responses) describe conditions in domain terms. Do not name libraries, schema columns, or internal classes — they couple your interface to internals.
+
+### Scope Discipline
+
+- Do not perform optimization, cleanup, or refactoring beyond what was requested without user approval.
+- When you notice opportunities for improvement outside the requested scope, surface them — describe what you found, the benefit, and the cost. The user may choose to include it now, defer it, or ask you to create a GitHub issue for follow-up.
+- The goal is high quality code, not the shortest path to task completion. Raising these opportunities is valuable; acting on them without discussion is not.
+- When work is needed for correctness, safety, or to complete the requested task but falls outside the original scope, do the minimal required amount and explain why. "Minimal required amount" means minimizing the changeset while maintaining high quality — not shortcuts or hacky solutions.
+
+### Test-First Development
+
+- Write a failing test before implementation code where feasible.
+- For bug fixes, reproduce the bug with a failing test before changing code. Confirm the test fails for the correct reason.
+- Apply the minimal change required to make the failing test pass.
+- Skip test-first only when the cost clearly outweighs the benefit (exploratory prototyping, pure configuration, cosmetic changes).
+
+### Design Principles
+
+- Prefer deep modules: simple interfaces that hide complex implementations. A module that exposes most of its complexity through its interface adds overhead without reducing cognitive load.
+- Hide information behind well-defined boundaries. Internal representations, storage formats, and implementation strategies should not leak through APIs.
+- Extract an abstraction when the third instance of a pattern appears — not before. Two similar cases are coincidence; three are a pattern.
+- Budget complexity: every new abstraction, indirection, or layer must simplify more code than it complicates. If it doesn't pay for itself, inline it.
+- Prefer narrow, specific interfaces over broad, general ones. A function that does one thing well is more useful than one that does many things approximately.
+
+### Strong Typing
+
+- Model a closed set of valid values as a named type with constants (an enum), not a bare primitive. Validate untrusted input into the type at the boundary, keep it typed through the code, and convert to a primitive only where an external API demands it.
+- Do not over-type open-ended values. Free text or user content stays a plain string — there is no enumerable set to protect. Use language-standard path types where they exist (e.g., `pathlib.Path` in Python) but do not create custom wrappers around primitives that have no invariant to enforce.
+- Keep signatures within the language's parameter norm; bundle cohesive data into a validated type rather than appending another positional argument.
+- Prefer the standard library's modern idioms over hand-rolled equivalents.
+
+### Docstrings and Comments
+
+- Default to writing no comments. Add one only when the why is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug.
+- A docstring documents the intent of the unit and the contract it offers. Do not reference callers, downstream behavior, or test code. Do not assume or describe context that exists only at the call site — the docstring must be intelligible without knowing who calls the function or why.
+- Only describe this function, class, or module. Implementation details of other modules do not belong here.
+- Use US English in code, docstrings, comments, and identifiers.
+
+### Dependencies
+
+- Do not add new dependencies without discussing with the user first.
+- When proposing a dependency, research and present: maintenance activity (last release date, commit frequency), contributor count, GitHub stars, known security advisories, and license compatibility.
+- Prefer standard library solutions where they exist. A dependency is justified when it saves significant complexity and has a healthy maintenance profile.
+- Supply chain risk is real. A dependency with few maintainers, infrequent releases, or no recent activity is a liability — flag it explicitly.
 
 ### Communication
 
@@ -117,6 +178,13 @@ Follow these while writing code.
 
 Verify these before marking work as done.
 
+### Validation
+
+- Prefer `Makefile` targets when available (`make lint`, `make test`, `make check`).
+- Fall back to language-specific commands from `.claude/rules/{lang}.md` when no Makefile target exists.
+- Run linting and formatting checks before considering work complete. Do not ship changes that fail lint or format checks.
+- If full-suite checks are expensive, run targeted checks and note what was skipped.
+
 ### Commits
 
 - Follow atomic commit principles:
@@ -124,6 +192,7 @@ Verify these before marking work as done.
   - Commits should be self-contained and independently reviewable.
   - Don't mix unrelated changes in a single commit.
   - Don't commit half-finished work; use stash if needed.
+- Commit each logical unit of work as it is completed, not at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone (repeated stash/apply cycles across files). Committing as you go produces a clean, reviewable history naturally.
 - Write clear commit messages that explain the "why", not just the "what".
 
 ### Pull Requests

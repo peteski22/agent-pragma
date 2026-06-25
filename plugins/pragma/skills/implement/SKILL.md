@@ -156,7 +156,7 @@ After implementation is complete, run validation.
    2. Path-scoped rule files (from Step 2)
    3. Universal rule file (from Step 2)
 
-   If custom commands exist at any level, use the highest-precedence match. Otherwise, fall back to these defaults:
+   If custom commands exist at any level, use the highest-precedence match. Otherwise, check for a Makefile with `lint`/`test` targets and use those. If no Makefile targets exist, fall back to these defaults:
    - Go: `golangci-lint run --fix -v`
    - Python: `uv run pre-commit run --all-files`
    - TypeScript: `pnpm run lint` or `npx biome check .`
