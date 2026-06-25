@@ -1,8 +1,12 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "pragma",
-  "version": "4.2.0",
+  "displayName": "Pragma",
+  "version": "4.3.0",
   "description": "Deterministic linting hooks, semantic code validators, and a multi-LLM advisory council. Enforces coding rules mechanically — not by suggestion.",
-  "author": { "name": "Peter Wilson" },
+  "author": {
+    "name": "Peter Wilson"
+  },
   "repository": "https://github.com/peteski22/agent-pragma",
   "license": "Apache-2.0",
   "keywords": ["validation", "code-quality", "go", "python", "typescript", "security", "linting", "llm-council"]
