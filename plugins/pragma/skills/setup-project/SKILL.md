@@ -250,9 +250,9 @@ paths:
 - `javascript` → `*.js` and `*.jsx` (use two separate `paths` entries, not brace expansion)
 - `rust` → `*.rs`
 
-Assemble each language rule file with:
-1. Header comment
-2. Paths frontmatter (always — scoped by extension, and by subdirectory when applicable)
+Assemble each language rule file with the YAML frontmatter as the very first bytes of the file, so path scoping is never silently disabled by a leading comment:
+1. Paths frontmatter (always — scoped by extension, and by subdirectory when applicable). Must be the first content in the file, with `---` as line 1.
+2. Header comment
 3. Language-specific rules from `$PLUGIN_ROOT/claude-md/languages/{lang}/{lang}.md`
 
 **Header:**
@@ -262,6 +262,19 @@ Assemble each language rule file with:
 <!-- Re-run /setup-project to regenerate -->
 ```
 
+**Assembled file shape** (example for `root:go`):
+```markdown
+---
+paths:
+  - "**/*.go"
+---
+<!-- Assembled by /setup-project from agent-pragma -->
+<!-- Language: go -->
+<!-- Re-run /setup-project to regenerate -->
+
+# Go Language Rules
+...
+```
 
 ## Step 6: Upsert AGENTS.md and CLAUDE.md blocks
 
