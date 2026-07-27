@@ -54,7 +54,13 @@ uvx star-chamber <command> [options] [arguments]
 uvx --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
-In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway, so no per-provider `--with` flags are required — plain `uvx star-chamber` is enough.
+In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway, so no *per-provider* SDK `--with` flags are needed. The Otari gateway provider itself, however, ships as an optional extra of `any-llm-sdk` and is not part of the base package — it must be added explicitly, or the first gateway call fails with `ModuleNotFoundError: No module named 'otari'`:
+
+```bash
+uvx --with 'any-llm-sdk[otari]' star-chamber <command> [options] [arguments]
+```
+
+When using Otari mode, add `--with 'any-llm-sdk[otari]'` to every `uvx star-chamber` command shown below.
 
 ## Step 0: Check Prerequisites
 
