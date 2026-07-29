@@ -114,13 +114,14 @@ Then show:
 ```text
 Created ~/.config/star-chamber/providers.json (Otari gateway mode)
 
-Setup:
-  1. Point at your Otari gateway:
-     export OTARI_API_BASE="https://your-gateway.example/v1"
-  2. Authenticate (the SDK auto-detects from its canonical env vars):
-     export OTARI_API_KEY="..."         # hosted platform (Bearer-token auth)
-     # — or —
-     export GATEWAY_API_KEY="..."       # self-hosted gateway
+Setup (the SDK auto-detects the credential from these env vars):
+  # Hosted otari.ai platform:
+  export OTARI_API_BASE="https://api.otari.ai/v1"
+  export OTARI_API_KEY="..."      # tk_... token, sent as Authorization: Bearer
+
+  # — or — self-hosted gateway:
+  export OTARI_API_BASE="https://your-gateway.example/v1"
+  export GATEWAY_API_KEY="..."    # sent via the Otari-Key header
 
 The generated config prefixes each model as provider:model (Otari's naming
 convention). Verify the prefixes against your gateway's docs.
@@ -606,10 +607,13 @@ Instead of setting individual provider API keys, you can route every non-local p
    ```
 3. Point at the gateway and authenticate:
    ```bash
+   # Hosted otari.ai platform:
+   export OTARI_API_BASE="https://api.otari.ai/v1"
+   export OTARI_API_KEY="..."      # tk_... token, sent as Authorization: Bearer
+
+   # — or — self-hosted gateway:
    export OTARI_API_BASE="https://your-gateway.example/v1"
-   export OTARI_API_KEY="..."         # hosted platform
-   # — or —
-   export GATEWAY_API_KEY="..."       # self-hosted gateway
+   export GATEWAY_API_KEY="..."    # sent via the Otari-Key header
    ```
 
 `api_base` and `api_key` may be omitted from the config; when omitted, the SDK's `OtariProvider` auto-detects credentials from its own env vars (`OTARI_API_KEY` for platform mode, `GATEWAY_API_KEY` for self-hosted). Both fields also support `${ENV_VAR}` references for explicit values.
