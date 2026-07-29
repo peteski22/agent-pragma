@@ -12,7 +12,7 @@ Two modes derive from a single direct-keys reference (providers.json):
                 gateway and are left untouched. The block templates only
                 ``api_base``; ``api_key`` is omitted so the SDK's OtariProvider
                 auto-detects credentials from its own env vars
-                (``OTARI_AI_TOKEN`` for platform, ``GATEWAY_API_KEY`` for
+                (``OTARI_API_KEY`` for platform, ``GATEWAY_API_KEY`` for
                 self-hosted).
 
 NOTE: the ``provider:model`` prefix follows Otari's documented convention; verify
@@ -59,7 +59,7 @@ def main() -> None:
             )
         ref["providers"] = rewritten
         # Template only api_base; omit api_key so the SDK's OtariProvider
-        # auto-detects credentials from its own env vars (OTARI_AI_TOKEN for
+        # auto-detects credentials from its own env vars (OTARI_API_KEY for
         # platform mode, GATEWAY_API_KEY for self-hosted).
         ref["otari"] = {"api_base": "${OTARI_API_BASE}"}
 
