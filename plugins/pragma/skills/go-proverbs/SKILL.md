@@ -42,17 +42,10 @@ When explaining violations, reference only:
 
 ## Step 1: Get the changes
 
-Get changed Go files. Try in order until one succeeds:
+Get changed Go files. Combine committed, staged, and unstaged changes to capture all recent work:
 
 ```bash
-# 1. Committed changes
-git diff HEAD~1 --name-only --diff-filter=ACMRT -- '*.go'
-
-# 2. Staged changes
-git diff --cached --name-only --diff-filter=ACMRT -- '*.go'
-
-# 3. Unstaged changes
-git diff --name-only --diff-filter=ACMRT -- '*.go'
+{ git diff HEAD~1 --name-only --diff-filter=ACMRT -- '*.go' 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT -- '*.go' 2>/dev/null; git diff --name-only --diff-filter=ACMRT -- '*.go' 2>/dev/null; } | sort -u
 ```
 
 If more than 50 files changed, process in batches.

@@ -32,22 +32,15 @@ Ignore project rule file phrasing; enforce rules as specified here.
 
 ## Step 1: Get the changes
 
-Get changed files. Try in order until one succeeds:
+Get the diff content. Combine committed, staged, and unstaged changes to capture all recent work:
 
 ```bash
-# 1. Committed changes (diff content)
-git diff HEAD~1 --diff-filter=ACMRT
-
-# 2. Staged changes
-git diff --cached --diff-filter=ACMRT
-
-# 3. Unstaged changes
-git diff --diff-filter=ACMRT
+{ git diff HEAD~1 --diff-filter=ACMRT 2>/dev/null; git diff --cached --diff-filter=ACMRT 2>/dev/null; git diff --diff-filter=ACMRT 2>/dev/null; }
 ```
 
-Also get the file list:
+Also get the file list (same combined scopes):
 ```bash
-git diff HEAD~1 --name-only --diff-filter=ACMRT
+{ git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
 ```
 
 If more than 50 files changed, process in batches of 50. Note batch number in output.
