@@ -57,7 +57,7 @@ Your task is to validate Python code against:
 Get the changed Python files. Combine committed, staged, and unstaged changes to capture all recent work:
 
 ```bash
-{ git diff HEAD~1 --name-only --diff-filter=ACMRT -- '*.py' 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT -- '*.py' 2>/dev/null; git diff --name-only --diff-filter=ACMRT -- '*.py' 2>/dev/null; } | sort -u
+{ git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT -- '*.py' 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT -- '*.py' 2>/dev/null; git diff --name-only --diff-filter=ACMRT -- '*.py' 2>/dev/null; } | sort -u
 ```
 
 The `--diff-filter=ACMRT` includes Added, Copied, Modified, Renamed, and Type-changed files (excludes Deleted).

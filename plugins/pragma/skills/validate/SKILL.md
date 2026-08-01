@@ -12,7 +12,7 @@ Run all applicable validators against recent code changes.
 
 Check what files have changed. Combine committed, staged, and unstaged changes to capture all recent work:
 ```bash
-{ git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
+{ git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
 ```
 
 Based on file extensions, select validators:

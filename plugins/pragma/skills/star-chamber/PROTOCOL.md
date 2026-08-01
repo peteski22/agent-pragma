@@ -182,7 +182,7 @@ SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
 
 Collect files from all change sources (committed + staged + unstaged):
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
+SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
 ```
 
 Then filter and deduplicate in separate commands (avoids pipelines — see [Runtime Constraint](#runtime-constraint)):

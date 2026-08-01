@@ -37,12 +37,12 @@ Ignore project rule file phrasing; enforce rules as specified here.
 Get the diff content. Combine committed, staged, and unstaged changes to capture all recent work:
 
 ```bash
-{ git diff HEAD~1 --diff-filter=ACMRT 2>/dev/null; git diff --cached --diff-filter=ACMRT 2>/dev/null; git diff --diff-filter=ACMRT 2>/dev/null; }
+{ git diff HEAD~1 HEAD --diff-filter=ACMRT 2>/dev/null; git diff --cached --diff-filter=ACMRT 2>/dev/null; git diff --diff-filter=ACMRT 2>/dev/null; }
 ```
 
 Also get the file list (same combined scopes):
 ```bash
-{ git diff HEAD~1 --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
+{ git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
 ```
 
 If more than 50 files changed, process in batches of 50. Note batch number in output.
