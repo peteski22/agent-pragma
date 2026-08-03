@@ -54,17 +54,10 @@ Your task is to validate Go code against:
 
 ## Input
 
-Get the changed Go files. Try in order until one succeeds:
+Get the changed Go files. Combine committed, staged, and unstaged changes to capture all recent work:
 
 ```bash
-# 1. Committed changes (most common)
-git diff HEAD~1 --name-only --diff-filter=ACMRT -- '*.go'
-
-# 2. Staged changes (pre-commit)
-git diff --cached --name-only --diff-filter=ACMRT -- '*.go'
-
-# 3. Unstaged changes (working directory)
-git diff --name-only --diff-filter=ACMRT -- '*.go'
+{ git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT -- '*.go' 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT -- '*.go' 2>/dev/null; git diff --name-only --diff-filter=ACMRT -- '*.go' 2>/dev/null; } | sort -u
 ```
 
 The `--diff-filter=ACMRT` includes Added, Copied, Modified, Renamed, and Type-changed files (excludes Deleted).

@@ -38,17 +38,10 @@ Your task is to validate that state machine definitions, transitions, and termin
 
 ## Input
 
-Get all changed files. Try in order until one succeeds:
+Get all changed files. Combine committed, staged, and unstaged changes to capture all recent work:
 
 ```bash
-# 1. Committed changes (most common)
-git diff HEAD~1 --name-only --diff-filter=ACMRT
-
-# 2. Staged changes (pre-commit)
-git diff --cached --name-only --diff-filter=ACMRT
-
-# 3. Unstaged changes (working directory)
-git diff --name-only --diff-filter=ACMRT
+{ git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; } | sort -u
 ```
 
 Filter out generated/vendor files:
