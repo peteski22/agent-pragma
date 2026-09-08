@@ -41,26 +41,28 @@
 **CLI invocation:** Star-chamber is a PyPI package with a CLI entry point. Use `uvx` to run it in an isolated environment:
 
 ```bash
-uvx star-chamber <command> [options] [arguments]
+uvx --with 'any-llm-sdk[otari]' star-chamber <command> [options] [arguments]
 ```
 
 `uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
 
 **Version:** This protocol targets star-chamber **0.4.x**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
 
-**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. In **direct** mode, each non-OpenAI provider (Anthropic, Gemini, Cohere, etc.) needs its SDK added via `--with` flags:
+**The Otari gateway client is part of the invocation, not an optional addition.** In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway. The gateway client ships as an optional extra of `any-llm-sdk` and is absent from the base package, so without `--with 'any-llm-sdk[otari]'` the first gateway call fails, reporting that the Otari packages are not installed. The failure lands at call time, not install time, so a command that resolves cleanly can still fail on use.
+
+**Every star-chamber invocation in this protocol already carries the flag. Copy the commands as written and do not strip it.** The flag is harmless outside Otari mode — it installs a gateway client that goes unused — so it is safe to leave in place whatever the configured mode is. Do not retype an invocation from memory: an invocation that omits `--with` resolves and runs, then fails at the first provider call.
+
+**Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. In **direct** mode, each non-OpenAI provider (Anthropic, Gemini, Cohere, etc.) needs its own SDK added as a further `--with` flag:
 
 ```bash
-uvx --with anthropic --with google-genai star-chamber <command> [options] [arguments]
+uvx --with 'any-llm-sdk[otari]' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
-In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway, so no *per-provider* SDK `--with` flags are needed. The Otari gateway provider itself, however, ships as an optional extra of `any-llm-sdk` and is not part of the base package — it must be added explicitly, or the first gateway call fails with `ModuleNotFoundError: No module named 'otari'`:
+In Otari mode those *per-provider* SDK flags are not needed, because the gateway holds the upstream credentials:
 
 ```bash
 uvx --with 'any-llm-sdk[otari]' star-chamber <command> [options] [arguments]
 ```
-
-When using Otari mode, add `--with 'any-llm-sdk[otari]'` to every `uvx star-chamber` command shown below.
 
 ## Step 0: Check Prerequisites
 
@@ -74,10 +76,10 @@ CONFIG_PATH="${STAR_CHAMBER_CONFIG:-$HOME/.config/star-chamber/providers.json}"
 
 **Verify star-chamber is accessible:**
 ```bash
-uvx star-chamber list-providers
+uvx --with 'any-llm-sdk[otari]' star-chamber list-providers
 ```
 
-If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall star-chamber list-providers` to refresh the cached environment.
+If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall --with 'any-llm-sdk[otari]' star-chamber list-providers` to refresh the cached environment.
 
 **If uv is missing**, stop and show:
 ```
@@ -158,9 +160,9 @@ To set up manually later, see the Configuration section below or run /star-chamb
 
 Star-chamber supports two modes, each with its own CLI command:
 
-**Code review** (default): Invoked with no question, or with `--file` flags pointing to code. Uses `uvx star-chamber review`. Follow all steps below.
+**Code review** (default): Invoked with no question, or with `--file` flags pointing to code. Uses the `star-chamber review` command. Follow all steps below.
 
-**Design question**: The user asked a question about architecture, design trade-offs, or approach (e.g., "should we use event sourcing or CRUD?", "what's the best way to structure auth?"). Uses `uvx star-chamber ask`. Skip Step 1 (no files to identify). In Step 2, still gather context.
+**Design question**: The user asked a question about architecture, design trade-offs, or approach (e.g., "should we use event sourcing or CRUD?", "what's the best way to structure auth?"). Uses the `star-chamber ask` command. Skip Step 1 (no files to identify). In Step 2, still gather context.
 
 The SDK handles prompt construction, fan-out to providers, response parsing, and consensus classification for both modes. This protocol handles target identification, context gathering, invocation, and result presentation.
 
@@ -285,12 +287,12 @@ The SDK handles prompt construction, fan-out to all configured providers, respon
 
 **Code review:**
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
+SC_TMPDIR="<literal path from mktemp output>"; uvx --with 'any-llm-sdk[otari]' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
 ```
 
 **Design question:**
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
+SC_TMPDIR="<literal path from mktemp output>"; uvx --with 'any-llm-sdk[otari]' star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
 ```
 
 **Non-debate mode:** Do NOT redirect stdout to a file — the JSON is consumed directly from the Bash tool response in Step 4.
@@ -317,7 +319,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx star-chamber ask --context-fi
 - `failed_providers` — providers that errored.
 - `summary` — aggregated summary.
 
-For full schema details: `uvx star-chamber schema code-review-result` or `uvx star-chamber schema design-advice-result`. List all schemas with `uvx star-chamber schema list`.
+For full schema details: `uvx --with 'any-llm-sdk[otari]' star-chamber schema code-review-result` or `uvx --with 'any-llm-sdk[otari]' star-chamber schema design-advice-result`. List all schemas with `uvx --with 'any-llm-sdk[otari]' star-chamber schema list`.
 
 ### Clean Up
 
@@ -432,7 +434,7 @@ Then run the same rule-loading and architecture-context logic from Step 2, writi
 ### Debate Flow
 
 ```text
-Round 1: uvx star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
+Round 1: uvx --with 'any-llm-sdk[otari]' star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
          ↓
          Use Read tool on round-1.json, create anonymous synthesis
          ↓
@@ -440,7 +442,7 @@ For each subsequent round (2 to N):
          ↓
     Write synthesis to $SC_TMPDIR/council-context.txt via Bash heredoc
          ↓
-    uvx star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
+    uvx --with 'any-llm-sdk[otari]' star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
          ↓
 Final: Use Read tool on last round's JSON for presentation (Step 4)
 ```
@@ -449,7 +451,7 @@ Final: Use Read tool on last round's JSON for presentation (Step 4)
 
 For each round, redirect stdout to a round file:
 ```bash
-SC_TMPDIR="<literal path>"; uvx star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
+SC_TMPDIR="<literal path>"; uvx --with 'any-llm-sdk[otari]' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
 ```
 
 Do NOT redirect stderr into the round file (no `2>&1`) — `uv` prints install messages to stderr which would corrupt the JSON.
@@ -532,11 +534,11 @@ The SDK ships the council protocol schemas as package data:
 
 ```bash
 # List available schemas.
-uvx star-chamber schema list
+uvx --with 'any-llm-sdk[otari]' star-chamber schema list
 
 # Print a specific schema.
-uvx star-chamber schema council-config
-uvx star-chamber schema code-review-result
+uvx --with 'any-llm-sdk[otari]' star-chamber schema council-config
+uvx --with 'any-llm-sdk[otari]' star-chamber schema code-review-result
 ```
 
 ### Provider fields
@@ -660,7 +662,7 @@ Otari expects the `model` field in `provider:model` form; consult Otari's docume
 error: No executables are provided by package `star-chamber`
 ```
 - Verify the package exists on PyPI: `pip index versions star-chamber`
-- Try `uvx --reinstall star-chamber list-providers` to clear the cache.
+- Try `uvx --reinstall --with 'any-llm-sdk[otari]' star-chamber list-providers` to clear the cache.
 
 ### Partial Failures
 
@@ -669,7 +671,7 @@ When some providers succeed and others fail, the JSON output includes `failed_pr
 ### Checking Provider Status
 
 ```bash
-uvx star-chamber list-providers
+uvx --with 'any-llm-sdk[otari]' star-chamber list-providers
 ```
 
 This shows all configured providers, their models, and connection status (direct, otari, or local).
