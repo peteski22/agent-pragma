@@ -218,8 +218,8 @@ flowchart TD
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `STAR_CHAMBER_CONFIG` | No | Custom path to star-chamber config (default: `~/.config/star-chamber/providers.json`) |
-| `OTARI_API_BASE` | For `/star-chamber` (Otari mode) | Base URL of your [Otari](https://github.com/mozilla-ai/otari) gateway |
-| `OTARI_AI_TOKEN` | For `/star-chamber` (Otari mode) | Otari hosted platform token (auto-detected by the SDK) |
+| `OTARI_API_BASE` | For `/star-chamber` (Otari mode) | Origin of your [Otari](https://github.com/mozilla-ai/otari) gateway, with no path (for example `https://api.otari.ai`) |
+| `OTARI_API_KEY` | For `/star-chamber` (Otari mode) | Otari hosted platform token (auto-detected by the SDK) |
 | `GATEWAY_API_KEY` | For `/star-chamber` (Otari mode) | Self-hosted Otari gateway API key (auto-detected by the SDK) |
 | `OPENAI_API_KEY` | For `/star-chamber` (direct mode) | OpenAI API key (if not routing through Otari) |
 | `ANTHROPIC_API_KEY` | For `/star-chamber` (direct mode) | Anthropic API key (if not routing through Otari) |
