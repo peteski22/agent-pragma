@@ -88,6 +88,13 @@ uvx --from 'star-chamber[otari]>=0.4.3' star-chamber list-providers
 
 If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall --from 'star-chamber[otari]>=0.4.3' star-chamber list-providers` to refresh the cached environment.
 
+**If `list-providers` fails because the Otari API base "ends in an API path"**, the base URL still carries an API path such as `/v1` from an older setup. The error names the setting that supplied the base and the corrected value. Show the error to the user and offer to apply the fix. Change nothing until the user agrees.
+
+- **`'otari.api_base' in the config`:** Offer to set `otari.api_base` in `$CONFIG_PATH` to the corrected value.
+- **`OTARI_API_BASE` or `GATEWAY_API_BASE`:** Find where the user sets the variable, for example with `grep -n -e OTARI_API_BASE -e GATEWAY_API_BASE ~/.zshrc ~/.zprofile ~/.bashrc ~/.bash_profile ~/.profile 2>/dev/null`. Offer to change that line to the corrected value. If the variable is set somewhere you cannot edit, give the user the corrected value to set there. The current shell and agent session keep the old value, so tell the user to restart them before the fix takes effect.
+
+After a fix to the config, run `list-providers` again to confirm it passes.
+
 **If uv is missing**, stop and show:
 ```
 uv is required but not installed.
@@ -627,7 +634,7 @@ Instead of setting individual provider API keys, you can route every non-local p
    export GATEWAY_API_KEY="..."    # sent via the Otari-Key header
    ```
 
-`api_base` is the gateway origin with no path. The SDK adds the gateway's `/api/v1` API root itself, so a base that ends in `/v1` fails at the first call as not found. A self-hosted gateway must be Otari 0.6.0 or later, because older gateways serve only `/v1`.
+`api_base` is the gateway origin with no path. The SDK adds the gateway's `/api/v1` API root itself, so star-chamber rejects a base that ends in an API path such as `/v1` before it calls any provider. A self-hosted gateway must be Otari 0.6.0 or later, because older gateways serve only `/v1`.
 
 `api_base` and `api_key` may be omitted from the config; when omitted, the SDK's `OtariProvider` auto-detects credentials from its own env vars (`OTARI_API_KEY` for platform mode, `GATEWAY_API_KEY` for self-hosted). Both fields also support `${ENV_VAR}` references for explicit values.
 
@@ -661,12 +668,19 @@ Otari expects the `model` field in `provider:model` form; consult Otari's docume
 - Check if the key is valid (not expired or revoked).
 - For Otari mode, verify credentials are set: `{ [ -n "$OTARI_API_KEY" ] || [ -n "$GATEWAY_API_KEY" ]; } && echo "set" || echo "not set"`
 
+**Otari API base ends in an API path:**
+```
+Error: Otari API base 'https://api.otari.ai/v1' from OTARI_API_BASE ends in an API path. The gateway client adds the API path itself, so the base must be the gateway origin. Set OTARI_API_BASE to 'https://api.otari.ai'.
+```
+- star-chamber exits with status 2 before it calls any provider.
+- Offer the fix described in [Step 0](#step-0-check-prerequisites).
+
 **Not Found from the Otari gateway for every provider:**
 ```json
 {"provider": "openai", "error": "[gateway] Not Found"}
 ```
-- Check that `OTARI_API_BASE` (or `otari.api_base` in the config) is the gateway origin with no path, such as `https://api.otari.ai`. A base that ends in `/v1` causes this error.
-- A self-hosted gateway must be Otari 0.6.0 or later.
+- A self-hosted gateway must be Otari 0.6.0 or later, because older gateways serve only `/v1`.
+- Check that `OTARI_API_BASE` (or `otari.api_base` in the config) points at the gateway origin.
 
 **Request timed out:**
 ```json
