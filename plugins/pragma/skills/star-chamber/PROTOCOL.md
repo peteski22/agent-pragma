@@ -41,31 +41,34 @@
 **CLI invocation:** Star-chamber is a PyPI package with a CLI entry point. Use `uvx` to run it in an isolated environment:
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber <command> [options] [arguments]
 ```
 
 `uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
 
-**Version:** This protocol targets star-chamber **0.4.2 or later**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
+**Version:** This protocol targets star-chamber **0.4.3 or later**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
 
-0.4.2 is the floor because it is the first release to declare the `otari` extra used below. Asking an earlier 0.4.x for that extra is not an error — uv warns on stderr, installs nothing, and exits 0 — so the council starts and then fails at its first provider call.
+0.4.3 is the floor for two reasons, and both fail late rather than at install time:
 
-Every command below therefore requests `star-chamber[otari]>=0.4.2` rather than the bare extra. The constraint is what makes the floor binding: an unconstrained request can be served from a cached pre-0.4.2 environment without the extra, and it reports nothing when it is. With the constraint, an environment that cannot satisfy the floor fails as an unsatisfiable-requirements error instead of producing a council that dies at its first provider call.
+- 0.4.2 is the first release to declare the `otari` extra used below. Asking an earlier 0.4.x for that extra is not an error — uv warns on stderr, installs nothing, and exits 0 — so the council starts and then fails at its first provider call.
+- 0.4.3 is the first release whose extra requires an Otari client that speaks the gateway's `/api/v1` API root. An older client still calls `/v1`, which the gateway no longer serves, so every gateway call fails as not found.
+
+Every command below therefore requests `star-chamber[otari]>=0.4.3` rather than the bare extra. The constraint is what makes the floor binding: an unconstrained request can be served from a cached older environment that lacks the extra or holds an outdated client, and it reports nothing when it is. With the constraint, an environment that cannot satisfy the floor fails as an unsatisfiable-requirements error instead of producing a council that dies at its first provider call.
 
 **The Otari gateway client is part of the invocation, not an optional addition.** In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway. The gateway client is absent from the base install, so without the `otari` extra the first gateway call fails, reporting that the Otari packages are not installed. The failure lands at call time, not install time, so a command that resolves cleanly can still fail on use.
 
-**Every star-chamber invocation in this protocol already requests the extra. Copy the commands as written and do not strip it.** The extra is harmless outside Otari mode — it installs a gateway client that goes unused — so it is safe to leave in place whatever the configured mode is. Do not retype an invocation from memory: an invocation that drops `--from 'star-chamber[otari]>=0.4.2'` resolves and runs, then fails at the first provider call.
+**Every star-chamber invocation in this protocol already requests the extra. Copy the commands as written and do not strip it.** The extra is harmless outside Otari mode — it installs a gateway client that goes unused — so it is safe to leave in place whatever the configured mode is. Do not retype an invocation from memory: an invocation that drops `--from 'star-chamber[otari]>=0.4.3'` resolves and runs, then fails at the first provider call.
 
 **Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. In **direct** mode, each non-OpenAI provider (Anthropic, Gemini, Cohere, etc.) needs its own SDK added as a further `--with` flag:
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.4.2' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[otari]>=0.4.3' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
 In Otari mode those *per-provider* SDK flags are not needed, because the gateway holds the upstream credentials:
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber <command> [options] [arguments]
 ```
 
 ## Step 0: Check Prerequisites
@@ -80,10 +83,10 @@ CONFIG_PATH="${STAR_CHAMBER_CONFIG:-$HOME/.config/star-chamber/providers.json}"
 
 **Verify star-chamber is accessible:**
 ```bash
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber list-providers
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber list-providers
 ```
 
-If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall --from 'star-chamber[otari]>=0.4.2' star-chamber list-providers` to refresh the cached environment.
+If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall --from 'star-chamber[otari]>=0.4.3' star-chamber list-providers` to refresh the cached environment.
 
 **If uv is missing**, stop and show:
 ```
@@ -293,12 +296,12 @@ The SDK handles prompt construction, fan-out to all configured providers, respon
 
 **Code review:**
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.4.2' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
+SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.4.3' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
 ```
 
 **Design question:**
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.4.2' star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
+SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.4.3' star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
 ```
 
 **Non-debate mode:** Do NOT redirect stdout to a file — the JSON is consumed directly from the Bash tool response in Step 4.
@@ -325,7 +328,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `failed_providers` — providers that errored.
 - `summary` — aggregated summary.
 
-For full schema details: `uvx --from 'star-chamber[otari]>=0.4.2' star-chamber schema code-review-result` or `uvx --from 'star-chamber[otari]>=0.4.2' star-chamber schema design-advice-result`. List all schemas with `uvx --from 'star-chamber[otari]>=0.4.2' star-chamber schema list`.
+For full schema details: `uvx --from 'star-chamber[otari]>=0.4.3' star-chamber schema code-review-result` or `uvx --from 'star-chamber[otari]>=0.4.3' star-chamber schema design-advice-result`. List all schemas with `uvx --from 'star-chamber[otari]>=0.4.3' star-chamber schema list`.
 
 ### Clean Up
 
@@ -440,7 +443,7 @@ Then run the same rule-loading and architecture-context logic from Step 2, writi
 ### Debate Flow
 
 ```text
-Round 1: uvx --from 'star-chamber[otari]>=0.4.2' star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
+Round 1: uvx --from 'star-chamber[otari]>=0.4.3' star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
          ↓
          Use Read tool on round-1.json, create anonymous synthesis
          ↓
@@ -448,7 +451,7 @@ For each subsequent round (2 to N):
          ↓
     Write synthesis to $SC_TMPDIR/council-context.txt via Bash heredoc
          ↓
-    uvx --from 'star-chamber[otari]>=0.4.2' star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
+    uvx --from 'star-chamber[otari]>=0.4.3' star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
          ↓
 Final: Use Read tool on last round's JSON for presentation (Step 4)
 ```
@@ -457,7 +460,7 @@ Final: Use Read tool on last round's JSON for presentation (Step 4)
 
 For each round, redirect stdout to a round file:
 ```bash
-SC_TMPDIR="<literal path>"; uvx --from 'star-chamber[otari]>=0.4.2' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
+SC_TMPDIR="<literal path>"; uvx --from 'star-chamber[otari]>=0.4.3' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
 ```
 
 Do NOT redirect stderr into the round file (no `2>&1`) — `uv` prints install messages to stderr which would corrupt the JSON.
@@ -540,11 +543,11 @@ The SDK ships the council protocol schemas as package data:
 
 ```bash
 # List available schemas.
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber schema list
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber schema list
 
 # Print a specific schema.
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber schema council-config
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber schema code-review-result
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber schema council-config
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber schema code-review-result
 ```
 
 ### Provider fields
@@ -677,7 +680,7 @@ Otari expects the `model` field in `provider:model` form; consult Otari's docume
 error: No executables are provided by package `star-chamber`
 ```
 - Verify the package exists on PyPI: `pip index versions star-chamber`
-- Try `uvx --reinstall --from 'star-chamber[otari]>=0.4.2' star-chamber list-providers` to clear the cache.
+- Try `uvx --reinstall --from 'star-chamber[otari]>=0.4.3' star-chamber list-providers` to clear the cache.
 
 ### Partial Failures
 
@@ -686,7 +689,7 @@ When some providers succeed and others fail, the JSON output includes `failed_pr
 ### Checking Provider Status
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.4.2' star-chamber list-providers
+uvx --from 'star-chamber[otari]>=0.4.3' star-chamber list-providers
 ```
 
 This shows all configured providers, their models, and connection status (direct, otari, or local).
