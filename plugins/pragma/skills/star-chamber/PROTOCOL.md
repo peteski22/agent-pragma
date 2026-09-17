@@ -122,12 +122,14 @@ Created ~/.config/star-chamber/providers.json (Otari gateway mode)
 
 Setup (the SDK auto-detects the credential from these env vars):
   # Hosted otari.ai platform:
-  export OTARI_API_BASE="https://api.otari.ai/v1"
+  export OTARI_API_BASE="https://api.otari.ai"
   export OTARI_API_KEY="..."      # tk_... token, sent as Authorization: Bearer
 
   # — or — self-hosted gateway:
-  export OTARI_API_BASE="https://your-gateway.example/v1"
+  export OTARI_API_BASE="https://your-gateway.example"
   export GATEWAY_API_KEY="..."    # sent via the Otari-Key header
+
+OTARI_API_BASE is the gateway origin with no path. The SDK adds the API path.
 
 The generated config prefixes each model as provider:model (Otari's naming
 convention). Verify the prefixes against your gateway's docs.
@@ -614,13 +616,15 @@ Instead of setting individual provider API keys, you can route every non-local p
 3. Point at the gateway and authenticate:
    ```bash
    # Hosted otari.ai platform:
-   export OTARI_API_BASE="https://api.otari.ai/v1"
+   export OTARI_API_BASE="https://api.otari.ai"
    export OTARI_API_KEY="..."      # tk_... token, sent as Authorization: Bearer
 
    # — or — self-hosted gateway:
-   export OTARI_API_BASE="https://your-gateway.example/v1"
+   export OTARI_API_BASE="https://your-gateway.example"
    export GATEWAY_API_KEY="..."    # sent via the Otari-Key header
    ```
+
+`api_base` is the gateway origin with no path. The SDK adds the gateway's `/api/v1` API root itself, so a base that ends in `/v1` fails at the first call as not found. A self-hosted gateway must be Otari 0.6.0 or later, because older gateways serve only `/v1`.
 
 `api_base` and `api_key` may be omitted from the config; when omitted, the SDK's `OtariProvider` auto-detects credentials from its own env vars (`OTARI_API_KEY` for platform mode, `GATEWAY_API_KEY` for self-hosted). Both fields also support `${ENV_VAR}` references for explicit values.
 
@@ -653,6 +657,13 @@ Otari expects the `model` field in `provider:model` form; consult Otari's docume
 - Verify the environment variable is set: `[ -n "$OPENAI_API_KEY" ] && echo "set" || echo "not set"`
 - Check if the key is valid (not expired or revoked).
 - For Otari mode, verify credentials are set: `{ [ -n "$OTARI_API_KEY" ] || [ -n "$GATEWAY_API_KEY" ]; } && echo "set" || echo "not set"`
+
+**Not Found from the Otari gateway for every provider:**
+```json
+{"provider": "openai", "error": "[gateway] Not Found"}
+```
+- Check that `OTARI_API_BASE` (or `otari.api_base` in the config) is the gateway origin with no path, such as `https://api.otari.ai`. A base that ends in `/v1` causes this error.
+- A self-hosted gateway must be Otari 0.6.0 or later.
 
 **Request timed out:**
 ```json
