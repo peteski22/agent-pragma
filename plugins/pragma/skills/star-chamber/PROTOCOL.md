@@ -51,7 +51,7 @@ uvx --from 'star-chamber[otari]>=0.4.3' star-chamber <command> [options] [argume
 0.4.3 is the floor for two reasons, and both fail late rather than at install time:
 
 - 0.4.2 is the first release to declare the `otari` extra used below. Asking an earlier 0.4.x for that extra is not an error — uv warns on stderr, installs nothing, and exits 0 — so the council starts and then fails at its first provider call.
-- 0.4.3 is the first release whose extra requires an Otari client that speaks the gateway's `/api/v1` API root. An older client still calls `/v1`, which the gateway no longer serves, so every gateway call fails as not found.
+- 0.4.3 is the first release whose extra requires an Otari client that speaks the `/api/v1` API root. The hosted otari.ai gateway and self-hosted Otari 0.6.0 or later serve only that root, so an older client, which calls `/v1`, fails every gateway call as not found. The reverse also holds: a self-hosted gateway older than 0.6.0 serves only `/v1`, so this protocol needs that gateway upgraded first.
 
 Every command below therefore requests `star-chamber[otari]>=0.4.3` rather than the bare extra. The constraint is what makes the floor binding: an unconstrained request can be served from a cached older environment that lacks the extra or holds an outdated client, and it reports nothing when it is. With the constraint, an environment that cannot satisfy the floor fails as an unsatisfiable-requirements error instead of producing a council that dies at its first provider call.
 
