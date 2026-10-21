@@ -139,14 +139,23 @@ Follow these while writing code.
 
 ### Commit Checkpoints
 
-Commit at each green checkpoint, not at each natural pause. Retroactively splitting a large changeset into atomic commits is painful and error-prone, so commit as you go instead.
+Commit as you work, not at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone.
 
 - Plan the logical units of work before writing code. One unit is one commit.
-- Implement one unit at a time. Commit it as soon as its tests and linters pass.
+- Implement one unit at a time, and commit it before starting the next.
 - Keep each commit self-contained and independently reviewable. Do not mix unrelated changes in a single commit.
-- Do not commit half-finished work. If a unit grows beyond its plan, split it rather than batching it.
+- Each commit is one complete idea. Do not commit work abandoned mid-edit, and split a unit that grows beyond its plan.
 - Write commit messages that explain the "why", not just the "what".
-- **NOTE:** Verify the committed tree, not the dirty working tree. A commit that depends on uncommitted edits still passes tests run in the worktree, so a broken commit can survive review. Use `git stash --keep-index` or a separate `git worktree` to check.
+
+Both checkpoint modes below are valid. Agree the mode with the user before the first commit.
+
+| Mode | Rule | Cost |
+|------|------|------|
+| **Green commits** | Every commit passes its own checks. | Code, tests, and call sites often have to land together, which makes larger commits. |
+| **Readable commits** | Every commit is one coherent idea. Intermediate commits may fail; the branch tip must pass. | `git bisect` and a build from an intermediate commit do not work. |
+
+- **NOTE:** Under green commits, verify the committed tree, not the dirty working tree. A commit that depends on uncommitted edits still passes tests run in the worktree, so a broken commit can survive review. Use `git stash --keep-index` or a separate `git worktree` to check.
+- Under readable commits, run the full checks on the branch tip before review. Do not open a Pull Request from a branch whose tip fails.
 
 ### Design Principles
 

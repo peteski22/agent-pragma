@@ -147,24 +147,28 @@ before the next one starts.
 **Before the first unit:**
 
 1. Resolve the deterministic check commands once, using the precedence rules in Phase 3 Step 1.
-2. Ask the user for permission to commit as you go, and wait for the answer. State the planned units from
-   Phase 1 so the decision is informed, and name the commit rules you will follow. Ask once per run; do not
-   re-ask between units.
+2. Ask the user how to commit, and wait for the answer. State the planned units from Phase 1 so the
+   decision is informed, and name the commit rules you will follow. Ask once per run; do not re-ask between
+   units. Offer these three answers:
 
-   Example: "May I follow the atomic commit principle and commit each unit as I go, under your commit rules?"
-
-   - **Yes** → work through the loop below.
-   - **No** → implement every unit without committing, then list the planned units in the Phase 4 report so
-     the user can split the changeset themselves.
+   - **Green commits** → commit each unit only once its own checks pass. Every commit stays bisectable.
+   - **Readable commits** → commit each unit as one coherent idea without requiring it to pass on its own,
+     then make the branch tip pass before Phase 4 completes. This keeps commits easier to review, at the
+     cost of bisect and of building an intermediate commit.
+   - **No commits** → implement every unit without committing, then list the planned units in the Phase 4
+     report so the user can split the changeset themselves.
 
    Skip the question when git steps were skipped in Phase 0, because there is nothing to commit to.
+
+   Record the chosen mode for the Phase 4 report.
 
 For each unit, in the planned order:
 
 1. Make the code changes for that unit only.
 2. Follow the rules loaded in Phase 0.
 3. Keep changes focused - don't over-engineer.
-4. Run the deterministic checks against the files the unit touched. Fix failures before committing.
+4. Under green commits, run the deterministic checks against the files the unit touched and fix failures
+   before committing. Under readable commits, skip this step and leave the checks to Phase 3.
 5. Stage only the files belonging to the unit and commit it, with a message explaining the "why".
 6. Record the commit hash and subject for the Phase 4 report.
 
@@ -181,8 +185,9 @@ re-plan the remaining units and note the change in the Phase 4 report.
 
 ## Phase 3: Validate
 
-After every unit is implemented, validate the complete change. Phase 2 checked each unit in isolation; this
-phase catches problems that only appear across units.
+After every unit is implemented, validate the complete change. Under green commits this catches problems
+that only appear across units. Under readable commits it is the only deterministic gate, so the branch tip
+must pass everything here before Phase 4.
 
 **Before running validators:** Re-check whether any new directories were introduced during implementation. If so, repeat Phase 0 for those directories and include any newly discovered rules.
 
@@ -235,7 +240,7 @@ Only after validation passes:
 
 1. Summarize what was implemented.
 2. List files changed.
-3. List the commits made, in order.
+3. List the commits made, in order, and the commit mode the user chose.
 4. List rules that were applied (from Phase 0).
 5. Note any warnings or justified SHOULD violations.
 6. Note any rule conflicts encountered.
@@ -281,8 +286,10 @@ Ready for review.
 ## Rules
 
 - Phase 0 is mandatory. Do NOT skip rule injection.
-- Plan commit units in Phase 1 and ask once in Phase 2 for permission to commit as you go. Once the user
-  agrees, commit each unit. Do NOT batch agreed work into a single commit, and do NOT re-ask per unit.
+- Plan commit units in Phase 1 and ask once in Phase 2 which commit mode to use. Once the user chooses,
+  commit each unit under that mode. Do NOT batch agreed work into a single commit, and do NOT re-ask per
+  unit.
+- Under readable commits, do NOT report completion while the branch tip fails.
 - Do NOT skip validation.
 - Do NOT say "done" until validation passes.
 - Do NOT ignore HARD or SHOULD violations.
