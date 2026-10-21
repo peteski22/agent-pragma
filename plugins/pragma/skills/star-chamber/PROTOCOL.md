@@ -486,7 +486,8 @@ Issues raised by a single provider. May be valid specialized insights.
 
 ### Approaches Considered
 
-**{name}** — Recommended by {recommended_by} provider(s)
+**{name}**
+- **Recommended by:** {recommended_by} of the providers that answered — omit this line entirely where every approach carries zero
 - **Pros:** {pros}
 - **Cons:** {cons}
 - **Risk:** {risk_level}
@@ -504,6 +505,7 @@ Issues raised by a single provider. May be valid specialized insights.
 - Keep the summary concise — users want to know what to fix.
 - If `failed_providers` is non-empty, note which providers failed and why.
 - Report the answering roster, not only the roster asked. `consensus_issues` and `majority_issues` are computed over `providers_responded`, so agreement across two of three providers asked is consensus among the two that answered, and saying "3 providers" there overstates it.
+- Check `recommended_by` across every approach before reporting it. Where every approach carries zero, omit the line rather than stating that no provider recommended anything. Zero throughout means either that the council did not derive the counts or that no provider's recommendation named an approach it had raised itself, and the output does not say which, so neither reading belongs in the report. Where any approach carries a non-zero count the field is live, and a zero then does mean the approach was considered and recommended by nobody.
 - Report the counts from `summary` as the council computed them. They describe the groupings the tool produced, before any grouping done by hand, so a report that groups issues by hand will show fewer issues than `total_issues` counts. Say that the grouping was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-grouped set as the council's own result.
 
 ## Debate Mode
