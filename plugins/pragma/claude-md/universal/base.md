@@ -147,15 +147,18 @@ Commit as you work, not at the end. Retroactively splitting a large changeset in
 - Each commit is one complete idea. Do not commit work abandoned mid-edit, and split a unit that grows beyond its plan.
 - Write commit messages that explain the "why", not just the "what".
 
-Both checkpoint modes below are valid. Agree the mode with the user before the first commit.
+All three checkpoint modes below are valid. Default to green commits, and ask only where the task leaves the choice genuinely unclear.
 
 | Mode | Rule | Cost |
 |------|------|------|
-| **Green commits** | Every commit passes its own checks. | Code, tests, and call sites often have to land together, which makes larger commits. |
+| **Green commits** | Every commit passed the project's deterministic checks when it was made. | Code, tests, and call sites often have to land together, which makes larger commits. |
 | **Readable commits** | Every commit is one coherent idea. Intermediate commits may fail; the branch tip must pass. | `git bisect` and a build from an intermediate commit do not work. |
+| **No commits** | The user asked for a single changeset. Nothing is committed. | The user splits the changeset themselves, so report the units you planned. |
 
-- **NOTE:** Under green commits, verify the committed tree, not the dirty working tree. A commit that depends on uncommitted edits still passes tests run in the worktree, so a broken commit can survive review. Use `git stash --keep-index` or a separate `git worktree` to check.
+- **NOTE:** Under green commits, commit the unit before you run its checks. The working tree then equals the commit, so the checks cover the committed content. Checking first proves nothing about the commit, because a check run in a dirty tree can pass on edits the commit does not carry.
+- Under green commits, a unit includes whatever it needs to pass, so a failing test and the change that satisfies it are one unit.
 - Under readable commits, run the full checks on the branch tip before review. Do not open a Pull Request from a branch whose tip fails.
+- A workflow that manages commits, such as the `implement` skill, settles the mode and owns the checkpoint loop. Outside such a workflow, do not infer permission to commit; follow the user's explicit instructions.
 
 ### Design Principles
 
