@@ -247,8 +247,8 @@ re-plan the remaining units and note the change in the Phase 4 report.
 ## Phase 3: Validate
 
 After every unit is implemented, validate the complete change. Under green commits this catches problems
-that only appear across units. Under readable commits it is the only deterministic gate, so the branch tip
-must pass everything here before Phase 4.
+that only appear across units. Under readable commits and no commits it is the only deterministic gate, so
+the result must pass everything here before Phase 4.
 
 **Before running validators:** Re-check whether any new directories were introduced during implementation. If so, repeat Phase 0 for those directories and include any newly discovered rules.
 
