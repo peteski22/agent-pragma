@@ -171,8 +171,8 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
 
 ## Phase 2: Implement
 
-Work through the commit units from Phase 1 one at a time. Each unit is implemented, checked, and committed
-before the next one starts.
+Work through the commit units from Phase 1 one at a time. Each unit is implemented and checked before the
+next one starts, and committed unless the mode from Phase 1 Step 5 is no commits.
 
 **Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
 Phase 3 Step 1. The commit mode was settled in Phase 1 Step 5.
@@ -182,13 +182,25 @@ For each unit, in the planned order:
 1. Make the code changes for that unit only.
 2. Follow the rules loaded in Phase 0.
 3. Keep changes focused - don't over-engineer.
-4. Under green commits, run the deterministic checks against the files the unit touched and fix failures
-   before committing. Under readable commits, skip this step and leave the checks to Phase 3.
-5. Stage only the files belonging to the unit and commit it, with a message explaining the "why".
-6. Record the commit hash and subject for the Phase 4 report.
+4. Then take the branch for the mode settled in Phase 1 Step 5:
+   - **Green commits** → stage only the files belonging to the unit, commit it, run the deterministic
+     checks, and fix failures with `git commit --amend` until they pass.
+   - **Readable commits** → stage only the files belonging to the unit and commit it. Leave the checks to
+     Phase 3.
+   - **No commits** → leave the unit's changes in the working tree, stage nothing, and move on.
+5. Under green or readable commits, record the commit hash and subject for the Phase 4 report. Under no
+   commits, record the unit as completed instead.
 
-**If git steps were skipped in Phase 0** (not a git repository, or the user declined a branch), implement
-every unit without committing and note this in the Phase 4 report.
+Every commit message explains the "why", not just the "what".
+
+**Declining a new branch does not disable committing.** Phase 0 asks about branches, and a user who
+continues on an existing feature branch can commit normally. Only an absent git repository makes committing
+impossible, and Phase 1 Step 5 already resolves that case to no commits.
+
+**If a commit itself fails**, stop before the next unit. A valid repository still rejects a commit for
+reasons that have nothing to do with the mode, such as an unset identity, a failed signature, or a hook
+that refuses the change. Report the command's error alongside the units already committed, and ask for
+guidance. Do not implement further units, and do not fall back to no commits on your own.
 
 **If a unit grows beyond its plan**, split it. Commit the finished part rather than letting the unit absorb
 unrelated work.
@@ -240,8 +252,14 @@ must pass everything here before Phase 4.
    - HARD violations: must fix.
    - SHOULD violations: fix or justify.
    - WARN: note but don't block.
-   - Commit each round of fixes. Where a fix belongs to a unit committed in Phase 2, use
-     `git commit --fixup=<that commit>` so it can be squashed before review.
+   - Commit each round of fixes under the mode from Phase 1 Step 5:
+     - **Green commits** → amend the unit commit the fix belongs to, or make the fix its own commit when it
+       belongs to no single unit. Re-run the deterministic checks against the rewritten commit.
+     - **Readable commits** → use `git commit --fixup=<that commit>` where the fix corrects one Phase 2
+       commit, and an ordinary commit otherwise. Run `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash`
+       before Phase 4, so the history reported is the history that gets reviewed.
+     - **No commits** → leave the fixes in the working tree.
+   - Record every commit this phase creates, and every rewritten hash, alongside the Phase 2 ledger.
 
 4. **Re-validate** if fixes were made.
 
@@ -255,7 +273,8 @@ Only after validation passes:
 
 1. Summarize what was implemented.
 2. List files changed.
-3. List the commits made, in order, and the commit mode the user chose.
+3. List the commits made, in order, and the commit mode in effect with how it was determined: asked,
+   stated in the task, or defaulted.
 4. List rules that were applied (from Phase 0).
 5. Note any warnings or justified SHOULD violations.
 6. Note any rule conflicts encountered.
@@ -279,7 +298,9 @@ Only after validation passes:
 - file.go: [what changed]
 - file_test.go: [what changed]
 
-**Commits:** green commits | readable commits | skipped - [reason, then the planned units]
+**Commits:** green commits | readable commits | no commits (user choice) | none (no git repository)
+[suffix "(default, not confirmed)" where the mode was defaulted; list the planned units where nothing was
+committed]
 - `abc1234` feat(scope): first logical unit
 - `def5678` feat(scope): second logical unit
 
@@ -301,9 +322,9 @@ Ready for review.
 ## Rules
 
 - Phase 0 is mandatory. Do NOT skip rule injection.
-- Plan commit units in Phase 1 and ask once in Phase 2 which commit mode to use. Once the user chooses,
-  commit each unit under that mode. Do NOT batch agreed work into a single commit, and do NOT re-ask per
-  unit.
+- Plan commit units in Phase 1 and settle the commit mode there. Under green or readable commits, commit
+  every unit. Under no commits, commit nothing. Do NOT batch agreed work into a single commit, do NOT
+  re-ask per unit, and do NOT commit anything once the user has chosen no commits.
 - Under readable commits, do NOT report completion while the branch tip fails.
 - Do NOT skip validation.
 - Do NOT say "done" until validation passes.
