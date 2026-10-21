@@ -214,7 +214,17 @@ Verify these before marking work as done.
 - Keep PRs focused; large PRs are hard to review.
 - Link PRs to issues using keywords: `Fixes #123`, `Closes #456`.
 - Rebase feature branches onto `main` before merging to keep history linear.
-- Squash commits if the PR contains fixup commits; preserve meaningful commit history otherwise.
+- Absorb fixup commits with `git rebase --autosquash` before merging. Preserve meaningful commit history otherwise, and do not collapse planned units into one commit.
+
+### Review Feedback
+
+Feedback arrives once the work is done, so answering it is the moment to repair the history rather than to extend it. A branch that grows a commit per review comment stops telling the reader what changed and why.
+
+- Fold a change that corrects an existing commit back into that commit. Use `git commit --fixup=<commit>`, then absorb the fixups with `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <base>`, where `<base>` is the commit the branch started from.
+- Make a genuinely new concern its own commit. Fixups are for correcting a unit, not for adding to it.
+- Rewriting commits that are already pushed needs a force push. Confirm with the user first, and push with `--force-with-lease` so a concurrent push is not overwritten.
+- Do not rewrite a commit someone else has built on. Add an ordinary commit instead.
+- **NOTE:** This is deliberate history repair, directed by a human who has read the branch. An unsupervised agent fixing its own validation failures mid-task must not rewrite history, because it cannot re-establish that every rewritten commit still passes its checks.
 
 ---
 
