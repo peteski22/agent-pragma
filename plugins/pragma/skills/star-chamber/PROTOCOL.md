@@ -190,7 +190,7 @@ Determine what code to review:
 
 **If `--file` arguments provided**, use those files as the review targets.
 
-**Otherwise, use recent changes.** Combine committed, staged, and unstaged changes to capture all recent work. Write the file list to a temp file so subsequent steps can read it back (shell variables do not persist between Bash tool invocations). Use separate blocks to avoid the pipe-breaks-variable-expansion runtime constraint:
+**Otherwise, use recent changes.** Combine the branch's committed changes with the staged and unstaged ones, so that reviewing a feature branch covers the whole branch. Take the committed range from the branch point rather than from the last commit. A range of `HEAD~1 HEAD` reviews the tip commit and says nothing about the commits before it, which is how a defect in an earlier commit reaches a clean verdict. Write the file list to a temp file so subsequent steps can read it back (shell variables do not persist between Bash tool invocations). Use separate blocks to avoid the pipe-breaks-variable-expansion runtime constraint:
 
 ```bash
 SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
@@ -200,8 +200,10 @@ SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
 
 Collect files from all change sources (committed + staged + unstaged):
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
+SC_TMPDIR="<literal path from mktemp output>"; SC_BASE="$(git merge-base HEAD "$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo main)" 2>/dev/null)"; if [ -z "$SC_BASE" ] || [ "$SC_BASE" = "$(git rev-parse HEAD)" ]; then SC_BASE="HEAD~1"; fi; ( git diff "$SC_BASE" HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
 ```
+
+`SC_BASE` is the branch point. It falls back to `HEAD~1` in the two cases where a branch point is no use: where none is found, and where it is `HEAD` itself, which is what happens on the default branch. Without the second guard the committed range is empty there and only the staged and unstaged changes reach the council.
 
 Then filter and deduplicate in separate commands (avoids pipelines — see [Runtime Constraint](#runtime-constraint)):
 ```bash
