@@ -419,6 +419,10 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 
 Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the Markdown formats below are for human consumption.
 
+**Consensus can understate agreement, depending on the installed release.** Where the release groups issues by comparing the `location` string each provider returned, a member citing `file.md:203-207` does not match one citing `file.md:205`, so a defect every member raised can land in `individual_issues` with the consensus list empty or holding something else. A release that compares line spans instead groups the two, which removes the problem rather than hiding it.
+
+Treat this as a property of the release in front of you rather than a standing truth. Where the individual issues hold what is plainly one defect in one place, cited in differing forms, group them by hand. Say in the report that the grouping was done by hand, and do not present a hand-grouped set as consensus the tool reported. Where the release already grouped them there is nothing to do and nothing to disclose.
+
 ### Code Review Format
 
 ```markdown
