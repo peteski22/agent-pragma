@@ -147,19 +147,33 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
    - **No commits** → every unit is implemented without committing, and the planned units are reported so
      the user can split the changeset themselves.
 
-   Settle the mode in this order, and stop at the first case that applies:
+   First establish whether green commits is available. It needs a working tree that carries nothing but
+   the work in progress, because the per-unit check runs there. If Phase 0 retained unrelated uncommitted
+   changes, green commits is unavailable until they are stashed, and the one question below is where that
+   is resolved.
 
-   1. **Commits are impossible.** Phase 0 reported that this is not a git repository. Use no commits,
-      record the reason as "no git repository", and do not ask.
+   Then settle the mode. The cases are mutually exclusive, so take the one that applies:
+
+   1. **Commits are impossible.** Phase 0 reported that this is not a git repository. Use no commits and
+      record the reason as "no git repository".
    2. **The task already states a preference.** The task text or the current session already asks for a
-      particular behavior, for example "commit as you go", "atomic commits please", or "one commit only".
-      Adopt the matching mode, state which mode you adopted and why, and do not ask. Re-asking a question
-      the user has already answered is the defect this phase exists to prevent.
-   3. **Ask.** State the planned units so the decision is informed, name the commit rules you will follow,
-      and wait for the answer. Ask at most once per run; never re-ask between units.
-   4. **No answer is available.** The run is non-interactive, or the user does not answer. Use green
-      commits, proceed, and record the mode as "green commits (default, not confirmed)". Never default to
-      no commits, because that reproduces the reported defect.
+      particular behavior, for example "commit as you go", "atomic commits please", or "leave the changes
+      uncommitted". Adopt the matching mode and state which mode you adopted and why. Re-asking a question
+      the user has already answered is the defect this phase exists to prevent. Where the stated
+      preference is green commits and green commits is unavailable, ask whether to stash the unrelated
+      changes or to use readable commits instead. That question settles the precondition, not the mode.
+      Do not report green commits until the tree carries nothing but the work in progress.
+   3. **The session can prompt the user.** Ask once. State the planned units so the decision is informed,
+      name the commit rules you will follow, and say so where green commits is unavailable, offering to
+      stash the unrelated changes or to use readable commits instead. Never re-ask, in this phase or any
+      later one.
+   4. **The session cannot prompt, or the question goes unanswered in this turn.** Use green commits where
+      it is available and readable commits where it is not. Record the mode with "(default, not
+      confirmed)". Do not wait for an answer that cannot arrive, and never default to no commits, because
+      that reproduces the reported defect.
+
+   Do not stash anything without the user's agreement. The mode and the green-commit precondition are both
+   settled here; no later phase reopens either.
 
    Then re-split or re-order the remaining units for the chosen mode. Under green commits, fold a unit
    together with whatever it needs to pass its own checks, including its tests and its call sites. Under
@@ -177,11 +191,10 @@ next one starts, and committed unless the mode from Phase 1 Step 5 is no commits
 **Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
 Phase 3 Step 1. The commit mode was settled in Phase 1 Step 5.
 
-**Under green commits, confirm the mode is still available.** The per-unit check runs in the working tree
-immediately after the commit, so the tree equals the commit and the check covers the committed content. That
-holds only while the tree carries nothing else. If Phase 0 left unrelated uncommitted changes there, say so
-and offer to stash them, or to fall back to readable commits. Do not stash anything without the user's
-agreement.
+**Under green commits, verify the precondition Phase 1 settled.** The per-unit check runs in the working
+tree immediately after the commit, so the tree equals the commit and the check covers the committed content.
+That holds only while the tree carries nothing but the work in progress. If unrelated changes are present
+after all, stop and report it. Do not reopen the mode question here.
 
 For each unit, in the planned order:
 
