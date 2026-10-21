@@ -137,6 +137,17 @@ Follow these while writing code.
 - Apply the minimal change required to make the failing test pass.
 - Skip test-first only when the cost clearly outweighs the benefit (exploratory prototyping, pure configuration, cosmetic changes).
 
+### Commit Checkpoints
+
+Commit at each green checkpoint, not at each natural pause. Retroactively splitting a large changeset into atomic commits is painful and error-prone, so commit as you go instead.
+
+- Plan the logical units of work before writing code. One unit is one commit.
+- Implement one unit at a time. Commit it as soon as its tests and linters pass.
+- Keep each commit self-contained and independently reviewable. Do not mix unrelated changes in a single commit.
+- Do not commit half-finished work. If a unit grows beyond its plan, split it rather than batching it.
+- Write commit messages that explain the "why", not just the "what".
+- **NOTE:** Verify the committed tree, not the dirty working tree. A commit that depends on uncommitted edits still passes tests run in the worktree, so a broken commit can survive review. Use `git stash --keep-index` or a separate `git worktree` to check.
+
 ### Design Principles
 
 - Prefer deep modules: simple interfaces that hide complex implementations. A module that exposes most of its complexity through its interface adds overhead without reducing cognitive load.
@@ -184,16 +195,6 @@ Verify these before marking work as done.
 - Fall back to language-specific commands from `.claude/rules/{lang}.md` when no Makefile target exists.
 - Run linting and formatting checks before considering work complete. Do not ship changes that fail lint or format checks.
 - If full-suite checks are expensive, run targeted checks and note what was skipped.
-
-### Commits
-
-- Follow atomic commit principles:
-  - Each commit should represent one logical change.
-  - Commits should be self-contained and independently reviewable.
-  - Don't mix unrelated changes in a single commit.
-  - Don't commit half-finished work; use stash if needed.
-- Commit each logical unit of work as it is completed, not at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone (repeated stash/apply cycles across files). Committing as you go produces a clean, reviewable history naturally.
-- Write clear commit messages that explain the "why", not just the "what".
 
 ### Pull Requests
 
