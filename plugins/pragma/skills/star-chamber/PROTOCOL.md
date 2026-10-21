@@ -391,6 +391,8 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 ### JSON Output Structure
 
 **Code review** (`mode: "code-review"`) output fields:
+- `providers_used` — every provider asked, including any that then failed.
+- `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over. A release that predates this field omits it, where the roster is `providers_used` minus the providers named in `failed_providers`.
 - `consensus_issues` — issues all providers agree on (address first).
 - `majority_issues` — issues flagged by 2+ providers (includes `flagged_by` list).
 - `individual_issues` — issues from single providers, keyed by provider name.
@@ -400,6 +402,8 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `summary` — aggregated summary.
 
 **Design question** (`mode: "design-question"`) output fields:
+- `providers_used` — every provider asked, including any that then failed.
+- `providers_responded` — the providers that returned a usable answer, and the denominator for `consensus_recommendation`. A release that predates this field omits it, where the roster is `providers_used` minus the providers named in `failed_providers`.
 - `prompt` — the original question.
 - `approaches` — aggregated approaches with `name`, `pros`, `cons`, `risk_level`, `fit_rating`, `recommended_by` count.
 - `consensus_recommendation` — recommendation all providers agreed on (if any).
