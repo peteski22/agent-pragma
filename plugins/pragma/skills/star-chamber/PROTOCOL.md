@@ -401,7 +401,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
 - `reviews` — full individual provider reviews with `raw_content`.
 - `failed_providers` — providers that errored (with error messages).
-- `summary` — aggregated summary.
+- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, `consensus_count` and `majority_count` count the first two of them, and `synthesis` holds the prose.
 
 **Design question** (`mode: "design-question"`) output fields:
 - `providers_used` — every provider asked, including any that then failed.
@@ -410,7 +410,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `approaches` — aggregated approaches with `name`, `pros`, `cons`, `risk_level`, `fit_rating`, `recommended_by` count.
 - `consensus_recommendation` — recommendation every provider that answered agreed on (if any).
 - `failed_providers` — providers that errored.
-- `summary` — aggregated summary.
+- `summary` — an object, not prose. `synthesis` holds the prose. The count fields are code-review only and are absent here.
 
 Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.6.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.6.0' star-chamber schema list`.
 
@@ -466,7 +466,7 @@ Issues raised by a single provider. May be valid specialized insights.
 |----------|---------------|--------------|
 | {name}   | {rating}      | {count}      |
 
-**Overall:** {summary from JSON}
+**Overall:** {summary.synthesis from JSON}
 ```
 
 ### Design Question Format
@@ -492,7 +492,7 @@ Issues raised by a single provider. May be valid specialized insights.
 
 ### Summary
 
-**Overall:** {summary from JSON}
+**Overall:** {summary.synthesis from JSON}
 ```
 
 **Presentation guidelines:**
