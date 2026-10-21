@@ -462,6 +462,8 @@ Issues raised by a single provider. May be valid specialized insights.
 
 ### Summary
 
+**Issues:** {summary.total_issues} distinct — {summary.consensus_count} consensus, {summary.majority_count} majority, the rest individual.
+
 | Provider | Quality Rating | Issues Found |
 |----------|---------------|--------------|
 | {name}   | {rating}      | {count}      |
@@ -502,6 +504,7 @@ Issues raised by a single provider. May be valid specialized insights.
 - Keep the summary concise — users want to know what to fix.
 - If `failed_providers` is non-empty, note which providers failed and why.
 - Report the answering roster, not only the roster asked. `consensus_issues` and `majority_issues` are computed over `providers_responded`, so agreement across two of three providers asked is consensus among the two that answered, and saying "3 providers" there overstates it.
+- Report the counts from `summary` as the council computed them. They describe the groupings the tool produced, before any grouping done by hand, so a report that groups issues by hand will show fewer issues than `total_issues` counts. Say that the grouping was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-grouped set as the council's own result.
 
 ## Debate Mode
 
