@@ -185,8 +185,10 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
 
 ## Phase 2: Implement
 
-Work through the commit units from Phase 1 one at a time. Each unit is implemented and checked before the
-next one starts, and committed unless the mode from Phase 1 Step 5 is no commits.
+Work through the commit units from Phase 1 one at a time. Each unit is implemented before the next one
+starts, and committed unless the mode from Phase 1 Step 5 is no commits. Green commits checks each unit at
+its own checkpoint; readable and no commits leave every check to Phase 3, which validates the complete
+change under all three modes.
 
 **Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
 Phase 3 Step 1. Under readable commits, also record the commit HEAD points at now, because Phase 3 needs
@@ -204,12 +206,19 @@ For each unit, in the planned order:
 2. Follow the rules loaded in Phase 0.
 3. Keep changes focused - don't over-engineer.
 4. Then take the branch for the mode settled in Phase 1 Step 5:
-   - **Green commits** → stage only the files belonging to the unit, commit it, run the deterministic
-     checks, and fix failures with `git commit --amend` until they pass. Committing first is what makes the
-     check cover the committed tree rather than a dirty one. Scope the command to the unit's files where it
+   - **Green commits** → stage only the files belonging to the unit and commit it. Committing first is
+     what makes the check cover the committed tree rather than a dirty one. Then run the deterministic
+     checks and repeat until the check passes and the working tree is clean against the commit. A command
+     that rewrites files and still exits zero leaves the tree ahead of the commit, so stage the rewrites in
+     the unit's own files and `git commit --amend`, then run the command again. Where the command also
+     rewrote files the unit did not touch, keep them out of the unit commit: commit them on their own and
+     report it. Folding them in puts unrelated work in the unit commit, and discarding them throws away a
+     change the project's own command made. Scope the command to the unit's files where it
      supports file arguments, and run it whole where it does not, as `make lint` and
-     `pre-commit run --all-files` do. Treat failures in files the unit did not touch as pre-existing:
-     report them, leave them alone, and do not let them block the commit.
+     `pre-commit run --all-files` do. A failure in a file the unit did not touch is pre-existing only where
+     that is established, for example because the same failure is present at the base commit; report it and
+     leave it alone. Otherwise treat it as caused by the unit. **If a failure cannot be made to pass**, stop
+     before the next unit, report that the commit is not green, and ask for guidance.
    - **Readable commits** → stage only the files belonging to the unit and commit it. Leave the checks to
      Phase 3.
    - **No commits** → leave the unit's changes in the working tree, stage nothing, and move on.
