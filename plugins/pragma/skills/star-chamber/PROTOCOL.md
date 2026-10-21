@@ -435,7 +435,8 @@ Treat this as a property of the release in front of you rather than a standing t
 **Files:** {list of files reviewed}
 **Scope:** {reviewed} of {changed} changed files reviewed; {excluded} left out. Committed range from {base}, which {covers the branch | is the tip commit only, so the branch is not covered}.
 **Excluded:** {path} ({reason}), {path} ({reason}) — or `none`
-**Providers:** {providers_used from JSON}
+**Providers asked:** {providers_used from JSON}
+**Providers answered:** {providers_responded from JSON, or the derived roster where that field is absent}
 
 ### Consensus Issues (All Providers Agree)
 
@@ -472,7 +473,8 @@ Issues raised by a single provider. May be valid specialized insights.
 ## Star-Chamber Advisory
 
 **Question:** {prompt from JSON}
-**Providers:** {providers_used from JSON}
+**Providers asked:** {providers_used from JSON}
+**Providers answered:** {providers_responded from JSON, or the derived roster where that field is absent}
 
 ### Consensus Recommendation
 
@@ -497,6 +499,8 @@ Issues raised by a single provider. May be valid specialized insights.
 - Note which providers flagged majority issues for context.
 - Keep the summary concise — users want to know what to fix.
 - If `failed_providers` is non-empty, note which providers failed and why.
+- Report the answering roster, not only the roster asked. `consensus_issues` and `majority_issues` are computed over `providers_responded`, so agreement across two of three providers asked is consensus among the two that answered, and saying "3 providers" there overstates it.
+- Where `providers_responded` is absent, derive the roster as `providers_used` minus the `provider` of every entry in `failed_providers`. The result is exact: each provider asked is recorded once in `providers_used` and then lands in either the reviews or `failed_providers`, never in both and never in neither. Prefer the field where it is present. The derivation follows from how the result is assembled rather than from a stated guarantee, and it holds only while display names are unique within a council, which they must be because those names key `quality_ratings` and `individual_issues`.
 
 ## Debate Mode
 
