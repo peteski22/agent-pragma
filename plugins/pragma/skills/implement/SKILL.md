@@ -189,7 +189,9 @@ Work through the commit units from Phase 1 one at a time. Each unit is implement
 next one starts, and committed unless the mode from Phase 1 Step 5 is no commits.
 
 **Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
-Phase 3 Step 1. The commit mode was settled in Phase 1 Step 5.
+Phase 3 Step 1. Under readable commits, also record the commit HEAD points at now, because Phase 3 needs
+that commit as the base of its rebase. Under green commits Phase 3 commits at the tip and needs no base,
+and under no commits there is nothing to rebase. The commit mode was settled in Phase 1 Step 5.
 
 **Under green commits, verify the precondition Phase 1 settled.** The per-unit check runs in the working
 tree immediately after the commit, so the tree equals the commit and the check covers the committed content.
@@ -241,6 +243,27 @@ must pass everything here before Phase 4.
 
 **Before running validators:** Re-check whether any new directories were introduced during implementation. If so, repeat Phase 0 for those directories and include any newly discovered rules.
 
+**Every change this phase makes is committed under the mode from Phase 1 Step 5.** That covers the fixes you
+write and the edits the commands make themselves, because the configured defaults include `--fix` and
+formatting commands that rewrite files and still exit zero. After each command, check the working tree:
+
+- **Green commits** → put the change in a new commit at the tip, then re-run the deterministic checks.
+  Amend only where the commit you are correcting is already the tip and has not been pushed. Never rewrite
+  an earlier unit commit here: `git commit --amend` reaches only the tip, and rebasing to reach further
+  back rewrites every descendant, whose checks ran against different content. A tip commit keeps the claim
+  that each commit passed its checks when it was made. Cleaning the history up afterwards is review work,
+  not validation work, and the universal rules cover it.
+- **Readable commits** → use `git commit --fixup=<that commit>` where the change corrects one earlier
+  commit of this run, and an ordinary commit otherwise. Before Phase 4, absorb the fixups with
+  `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <base>`, where `<base>` is the commit HEAD pointed
+  at before Phase 2 began. Record that commit at the start of Phase 2; a bare `--autosquash` has no target
+  and fails on a branch with no upstream, which is what Phase 0 just created. Where any commit to be
+  rewritten has already been pushed, ask the user before rewriting it, and keep an ordinary tip commit
+  instead if they decline.
+- **No commits** → leave every change in the working tree.
+
+Record every commit this phase creates, and every hash a rewrite replaces, alongside the Phase 2 ledger.
+
 1. **Run linters first** (deterministic checks):
 
    **Check rules for custom validation commands:**
@@ -256,7 +279,7 @@ must pass everything here before Phase 4.
 
    **Priority order:** Local supplements > path-scoped language rules > universal rules > built-in defaults. Local supplements have the highest priority to allow per-machine customization without modifying version-controlled rules.
 
-   Fix any issues before proceeding.
+   Fix any issues before proceeding, and commit the fixes under the rule above.
 
 2. **Run semantic validators** (LLM checks):
    - Use the Task tool to spawn validators in parallel. For each validator, create a Task with `subagent_type: "general-purpose"` and a prompt instructing the subagent to invoke the validator skill via the Skill tool (e.g., `skill: "security"`) and return the JSON result verbatim.
@@ -275,14 +298,7 @@ must pass everything here before Phase 4.
    - HARD violations: must fix.
    - SHOULD violations: fix or justify.
    - WARN: note but don't block.
-   - Commit each round of fixes under the mode from Phase 1 Step 5:
-     - **Green commits** → amend the unit commit the fix belongs to, or make the fix its own commit when it
-       belongs to no single unit. Re-run the deterministic checks against the rewritten commit.
-     - **Readable commits** → use `git commit --fixup=<that commit>` where the fix corrects one Phase 2
-       commit, and an ordinary commit otherwise. Run `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash`
-       before Phase 4, so the history reported is the history that gets reviewed.
-     - **No commits** → leave the fixes in the working tree.
-   - Record every commit this phase creates, and every rewritten hash, alongside the Phase 2 ledger.
+   - Commit each round of fixes under the rule above.
 
 4. **Re-validate** if fixes were made.
 
