@@ -393,9 +393,9 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 
 **Code review** (`mode: "code-review"`) output fields:
 - `providers_used` — every provider asked, including any that then failed.
-- `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over. A release that predates this field omits it, where the roster is `providers_used` minus the providers named in `failed_providers`.
-- `consensus_issues` — issues all providers agree on (address first).
-- `majority_issues` — issues flagged by 2+ providers (includes `flagged_by` list).
+- `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over.
+- `consensus_issues` — issues every provider that answered agreed on (address first).
+- `majority_issues` — issues flagged by more than one provider that answered, but not all of them (includes `flagged_by` list).
 - `individual_issues` — issues from single providers, keyed by provider name.
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
 - `reviews` — full individual provider reviews with `raw_content`.
@@ -404,10 +404,10 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 
 **Design question** (`mode: "design-question"`) output fields:
 - `providers_used` — every provider asked, including any that then failed.
-- `providers_responded` — the providers that returned a usable answer, and the denominator for `consensus_recommendation`. A release that predates this field omits it, where the roster is `providers_used` minus the providers named in `failed_providers`.
+- `providers_responded` — the providers that returned a usable answer, and the denominator for `consensus_recommendation`.
 - `prompt` — the original question.
 - `approaches` — aggregated approaches with `name`, `pros`, `cons`, `risk_level`, `fit_rating`, `recommended_by` count.
-- `consensus_recommendation` — recommendation all providers agreed on (if any).
+- `consensus_recommendation` — recommendation every provider that answered agreed on (if any).
 - `failed_providers` — providers that errored.
 - `summary` — aggregated summary.
 
@@ -437,9 +437,9 @@ Treat this as a property of the release in front of you rather than a standing t
 **Scope:** {reviewed} of {changed} changed files reviewed; {excluded} left out. Committed range from {base}, which {covers the branch | is the tip commit only, so the branch is not covered}.
 **Excluded:** {path} ({reason}), {path} ({reason}) — or `none`
 **Providers asked:** {providers_used from JSON}
-**Providers answered:** {providers_responded from JSON, or the derived roster where that field is absent}
+**Providers answered:** {providers_responded from JSON}
 
-### Consensus Issues (All Providers Agree)
+### Consensus Issues (Every Provider That Answered Agrees)
 
 These issues were flagged by every council member. Address these first.
 
@@ -475,7 +475,7 @@ Issues raised by a single provider. May be valid specialized insights.
 
 **Question:** {prompt from JSON}
 **Providers asked:** {providers_used from JSON}
-**Providers answered:** {providers_responded from JSON, or the derived roster where that field is absent}
+**Providers answered:** {providers_responded from JSON}
 
 ### Consensus Recommendation
 
@@ -501,7 +501,6 @@ Issues raised by a single provider. May be valid specialized insights.
 - Keep the summary concise — users want to know what to fix.
 - If `failed_providers` is non-empty, note which providers failed and why.
 - Report the answering roster, not only the roster asked. `consensus_issues` and `majority_issues` are computed over `providers_responded`, so agreement across two of three providers asked is consensus among the two that answered, and saying "3 providers" there overstates it.
-- Where `providers_responded` is absent, derive the roster as `providers_used` minus the `provider` of every entry in `failed_providers`. The result is exact: each provider asked is recorded once in `providers_used` and then lands in either the reviews or `failed_providers`, never in both and never in neither. Prefer the field where it is present. The derivation follows from how the result is assembled rather than from a stated guarantee, and it holds only while display names are unique within a council, which they must be because those names key `quality_ratings` and `individual_issues`.
 
 ## Debate Mode
 
