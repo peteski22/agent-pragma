@@ -554,8 +554,9 @@ Phase 4 combines all validator results into a single output:
 
 | Scenario | Handling |
 |----------|----------|
-| First commit / no HEAD~1 | HEAD~1 diff silently produces nothing; staged and unstaged changes are still captured |
-| Detached HEAD | Use `--diff-filter=ACMRT` to detect changes |
+| No usable branch point | The committed range falls back to the tip commit, and the review reports `tip commit only` rather than claiming branch coverage |
+| First commit / no HEAD~1 | The fallback range produces nothing; staged, unstaged, and untracked changes are still captured |
+| Detached HEAD | No upstream or default-branch ref resolves, so the fallback applies and the narrower scope is reported |
 | >50 files changed | Process in batches of 50, note batch number |
 | Conflicting rules | Prefer more specific rule, log in `rule_conflicts` array |
 | New directories created during implementation | Re-run Phase 0 before validation |

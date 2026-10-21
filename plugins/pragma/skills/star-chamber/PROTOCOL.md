@@ -186,11 +186,11 @@ The SDK handles prompt construction, fan-out to providers, response parsing, and
 
 *(Code review mode only. Skip for design questions.)*
 
-Determine what code to review:
+Every review records two sets. The **changed set** is every file this branch and this working tree touch. The **target set** is the files the council reads. Step 4 reports one against the other, so a review that covered part of a change cannot read like one that covered all of it.
 
-**If `--file` arguments provided**, use those files as the review targets.
+Shell variables do not persist between Bash tool invocations, so each set is written to a temp file that later blocks read back. Use separate blocks to avoid the pipe-breaks-variable-expansion runtime constraint.
 
-**Otherwise, use recent changes.** Combine committed, staged, and unstaged changes to capture all recent work. Write the file list to a temp file so subsequent steps can read it back (shell variables do not persist between Bash tool invocations). Use separate blocks to avoid the pipe-breaks-variable-expansion runtime constraint:
+Create the temp directory first, whether or not `--file` was given. Step 2 and Step 4 both read artifacts from it.
 
 ```bash
 SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
@@ -198,9 +198,49 @@ SC_TMPDIR="$(mktemp -d)"; echo "$SC_TMPDIR"
 
 **Capture the echoed path** and re-set `SC_TMPDIR` in every subsequent block.
 
-Collect files from all change sources (committed + staged + unstaged):
+### Resolve the base of the committed range
+
+Take the committed range from the branch point rather than from the last commit. A range of `HEAD~1 HEAD` reviews the tip commit and says nothing about the commits before it, which is how a defect in an earlier commit reaches a clean verdict. Try the remote's default branch, then a local `main` or `master`. Do not use `@{upstream}`: a feature branch's upstream is its own remote copy, so the branch point against it is the branch's own tip on an up-to-date branch, not an integration point. A candidate that resolves to `HEAD` is rejected and the next one is tried. This block echoes its result rather than passing it on, for the same reason the temp path is echoed.
+
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; ( git diff HEAD~1 HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
+SC_BASE=""; SC_SEEN=""; SC_HEAD="$(git rev-parse HEAD)"; for SC_REF in "$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" main master; do if [ -z "$SC_REF" ]; then continue; fi; SC_TRY="$(git merge-base HEAD "$SC_REF" 2>/dev/null)"; if [ -z "$SC_TRY" ]; then continue; fi; SC_SEEN="yes"; if [ "$SC_TRY" = "$SC_HEAD" ]; then continue; fi; SC_BASE="$SC_TRY"; break; done; if [ -n "$SC_BASE" ]; then echo "base:$SC_BASE scope:branch"; else if [ -n "$SC_SEEN" ]; then echo "base:HEAD~1 scope:tip-commit-only reason:on-integration-branch"; else echo "base:HEAD~1 scope:tip-commit-only reason:no-integration-ref"; fi; fi
+```
+
+**Capture the echoed base and scope word.** Re-set `SC_BASE` literally in the blocks below, and carry the scope word into the Step 4 scope line.
+
+- `scope:branch` means the range covers the branch from its branch point.
+- `scope:tip-commit-only` means no usable branch point was found, so the range is the last commit alone and the review does not cover the branch. Report that in Step 4 rather than letting it pass as full coverage. The silence is the original defect, not the narrow range.
+
+The two reasons are not the same problem. `reason:on-integration-branch` means a candidate resolved and its branch point is `HEAD`, which is the expected result of reviewing the default branch itself, where the last commit is the unit of work. `reason:no-integration-ref` means no candidate ref resolved at all, so the integration point is unknown and a feature branch's earlier commits are being left out. Name the reason in the scope line, because the second is a coverage gap and the first is not.
+
+A branch point is unusable when no candidate ref resolves, and when every candidate's branch point is `HEAD` itself, which is what happens on the default branch. Without the second case the committed range is empty there and only the staged, unstaged, and untracked changes reach the council.
+
+### Collect the changed set
+
+This is the reporting universe, so it keeps deletions and untracked files. A file the branch deleted is still a changed file, and an untracked file often holds the newest code.
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; SC_BASE="<literal base from the echoed line>"; ( git diff "$SC_BASE" HEAD --name-only 2>/dev/null; git diff --cached --name-only 2>/dev/null; git diff --name-only 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null ) > "$SC_TMPDIR/raw-changed.txt"
+```
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; sort -u "$SC_TMPDIR/raw-changed.txt" > "$SC_TMPDIR/changed.txt"
+```
+
+### Collect the target set
+
+**If `--file` arguments were provided**, those paths are the targets. Write them straight to `filtered.txt` and skip the filter below, because the caller named them deliberately:
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; cat > "$SC_TMPDIR/filtered.txt" << 'EOF'
+<one --file path per line>
+EOF
+```
+
+**Otherwise collect the reviewable changed files.** This set filters to `ACMRT`, because a deleted file has no content for the council to read:
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; SC_BASE="<literal base from the echoed line>"; ( git diff "$SC_BASE" HEAD --name-only --diff-filter=ACMRT 2>/dev/null; git diff --cached --name-only --diff-filter=ACMRT 2>/dev/null; git diff --name-only --diff-filter=ACMRT 2>/dev/null; git ls-files --others --exclude-standard 2>/dev/null ) > "$SC_TMPDIR/raw-files.txt"
 ```
 
 Then filter and deduplicate in separate commands (avoids pipelines — see [Runtime Constraint](#runtime-constraint)):
@@ -211,6 +251,37 @@ SC_TMPDIR="<literal path from mktemp output>"; grep -v -E '(node_modules|vendor|
 ```bash
 SC_TMPDIR="<literal path from mktemp output>"; sort -u "$SC_TMPDIR/filtered.txt" > "$SC_TMPDIR/files.txt"
 ```
+
+### Narrowing the target set
+
+**When the list is narrowed by hand, keep every file that carries new production code**, however few lines changed in it. A small diff in a composition root, in dependency wiring, or in a shared module is where a pattern break hides, because those few lines decide how the new code joins the existing structure. The size of a file's diff is a poor measure of how much of the design it settles. Drop generated, vendored, and lock files. Do not drop a file for being large.
+
+`files.txt` is the authoritative target list, and Step 3 reviews exactly what it holds. Write any narrowing back to it before the counts below are taken:
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; cat > "$SC_TMPDIR/kept.txt" << 'EOF'
+<the kept paths, one per line>
+EOF
+sort -u "$SC_TMPDIR/kept.txt" > "$SC_TMPDIR/files.txt"
+```
+
+Narrowing only the Step 3 argument list leaves `files.txt` overstating what was reviewed, and the scope line then reports coverage the council never had. That is the original defect in a second form.
+
+### Record what was left out
+
+Take these after any narrowing. `comm` needs sorted inputs, which `sort -u` guarantees on both sides.
+
+Label every excluded path with why it went: `deleted` where the changed set holds a path the tree no longer does, `generated` or `vendored` where the filter dropped it, and `narrowed` where it was removed by hand. A bare count tells a reader nothing about whether the omission mattered.
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; comm -23 "$SC_TMPDIR/changed.txt" "$SC_TMPDIR/files.txt" > "$SC_TMPDIR/excluded.txt"
+```
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; echo "changed:$(wc -l < "$SC_TMPDIR/changed.txt")"; echo "reviewed:$(wc -l < "$SC_TMPDIR/files.txt")"; echo "excluded:$(wc -l < "$SC_TMPDIR/excluded.txt")"
+```
+
+**Capture the three counts** for the Step 4 scope line, and read `excluded.txt` with the Read tool for the excluded list. A review that covered part of the change reads exactly like one that covered all of it unless the two sets are reported against each other.
 
 The file list at `$SC_TMPDIR/files.txt` is used by Step 2 for path-scoped rule matching and by Step 3 as review targets.
 
@@ -348,12 +419,18 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 
 Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the Markdown formats below are for human consumption.
 
+**Consensus can understate agreement, depending on the installed release.** Where the release groups issues by comparing the `location` string each provider returned, a member citing `file.md:203-207` does not match one citing `file.md:205`, so a defect every member raised can land in `individual_issues` with the consensus list empty or holding something else. A release that compares line spans instead groups the two, which removes the problem rather than hiding it.
+
+Treat this as a property of the release in front of you rather than a standing truth. Where the individual issues hold what is plainly one defect in one place, cited in differing forms, group them by hand. Say in the report that the grouping was done by hand, and do not present a hand-grouped set as consensus the tool reported. Where the release already grouped them there is nothing to do and nothing to disclose.
+
 ### Code Review Format
 
 ```markdown
 ## Star-Chamber Review
 
 **Files:** {list of files reviewed}
+**Scope:** {reviewed} of {changed} changed files reviewed; {excluded} left out. Committed range from {base}, which {covers the branch | is the tip commit only, so the branch is not covered}.
+**Excluded:** {path} ({reason}), {path} ({reason}) — or `none`
 **Providers:** {providers_used from JSON}
 
 ### Consensus Issues (All Providers Agree)
