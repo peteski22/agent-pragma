@@ -411,7 +411,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `failed_providers` — providers that errored.
 - `summary` — aggregated summary.
 
-For full schema details: `uvx --from 'star-chamber[otari]>=0.5.0' star-chamber schema code-review-result` or `uvx --from 'star-chamber[otari]>=0.5.0' star-chamber schema design-advice-result`. List all schemas with `uvx --from 'star-chamber[otari]>=0.5.0' star-chamber schema list`.
+Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.5.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.5.0' star-chamber schema list`.
 
 ### Clean Up
 
