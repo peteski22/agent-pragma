@@ -131,20 +131,58 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
      3. Check whether entering a terminal state creates a cancellation signal or cleanup action, not just a status label.
      4. If the existing codebase has states where "terminal" means "UI considers it done" but runtime processes continue, note this in the Phase 4 report and ensure new code does not compound the problem.
 3. Identify files that need changes based on discovered patterns.
+4. **Plan the commit units.** Split the work into logical units, where each unit is one self-contained,
+   independently reviewable change. Order them so that each unit leaves the tree working: shared types and
+   helpers before the code that consumes them. Record the list for Phase 2.
+
+   A task touching one concern is one unit. Do not invent units to pad the history.
 
 ---
 
 ## Phase 2: Implement
 
-1. Make the necessary code changes.
+Work through the commit units from Phase 1 one at a time. Each unit is implemented, checked, and committed
+before the next one starts.
+
+**Before the first unit:**
+
+1. Resolve the deterministic check commands once, using the precedence rules in Phase 3 Step 1.
+2. Ask the user for permission to commit as you go, and wait for the answer. State the planned units from
+   Phase 1 so the decision is informed, and name the commit rules you will follow. Ask once per run; do not
+   re-ask between units.
+
+   Example: "May I follow the atomic commit principle and commit each unit as I go, under your commit rules?"
+
+   - **Yes** → work through the loop below.
+   - **No** → implement every unit without committing, then list the planned units in the Phase 4 report so
+     the user can split the changeset themselves.
+
+   Skip the question when git steps were skipped in Phase 0, because there is nothing to commit to.
+
+For each unit, in the planned order:
+
+1. Make the code changes for that unit only.
 2. Follow the rules loaded in Phase 0.
 3. Keep changes focused - don't over-engineer.
+4. Run the deterministic checks against the files the unit touched. Fix failures before committing.
+5. Stage only the files belonging to the unit and commit it, with a message explaining the "why".
+6. Record the commit hash and subject for the Phase 4 report.
+
+**If git steps were skipped in Phase 0** (not a git repository, or the user declined a branch), implement
+every unit without committing and note this in the Phase 4 report.
+
+**If a unit grows beyond its plan**, split it. Commit the finished part rather than letting the unit absorb
+unrelated work.
+
+**If the unit plan proves wrong** (a unit is not independently reviewable, or the order breaks the tree),
+re-plan the remaining units and note the change in the Phase 4 report.
 
 ---
 
 ## Phase 3: Validate
 
-After implementation is complete, run validation.
+After every unit is implemented, validate the complete change. Phase 2 checked each unit in isolation; this
+phase catches problems that only appear across units.
 
 **Before running validators:** Re-check whether any new directories were introduced during implementation. If so, repeat Phase 0 for those directories and include any newly discovered rules.
 
@@ -182,6 +220,8 @@ After implementation is complete, run validation.
    - HARD violations: must fix.
    - SHOULD violations: fix or justify.
    - WARN: note but don't block.
+   - Commit each round of fixes. Where a fix belongs to a unit committed in Phase 2, use
+     `git commit --fixup=<that commit>` so it can be squashed before review.
 
 4. **Re-validate** if fixes were made.
 
@@ -195,9 +235,11 @@ Only after validation passes:
 
 1. Summarize what was implemented.
 2. List files changed.
-3. List rules that were applied (from Phase 0).
-4. Note any warnings or justified SHOULD violations.
-5. Note any rule conflicts encountered.
+3. List the commits made, in order.
+4. List rules that were applied (from Phase 0).
+5. Note any warnings or justified SHOULD violations.
+6. Note any rule conflicts encountered.
+7. Note any change to the Phase 1 unit plan, and any reason commits were skipped.
 
 ## Output Format
 
@@ -217,6 +259,10 @@ Only after validation passes:
 - file.go: [what changed]
 - file_test.go: [what changed]
 
+**Commits:** (or `skipped - <reason>`, followed by the planned units)
+- `abc1234` feat(scope): first logical unit
+- `def5678` feat(scope): second logical unit
+
 **Validation:**
 - Linting: ✓ passed
 - Security: ✓ passed (no HARD, no unexplained SHOULD)
@@ -229,12 +275,14 @@ Only after validation passes:
 **Warnings:**
 - [any WARN items to be aware of]
 
-Ready for review or commit.
+Ready for review.
 ```
 
 ## Rules
 
 - Phase 0 is mandatory. Do NOT skip rule injection.
+- Plan commit units in Phase 1 and ask once in Phase 2 for permission to commit as you go. Once the user
+  agrees, commit each unit. Do NOT batch agreed work into a single commit, and do NOT re-ask per unit.
 - Do NOT skip validation.
 - Do NOT say "done" until validation passes.
 - Do NOT ignore HARD or SHOULD violations.
