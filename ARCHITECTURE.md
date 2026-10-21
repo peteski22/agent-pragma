@@ -19,9 +19,12 @@ flowchart TB
 
     subgraph Pipeline["Full Pipeline (/implement)"]
         I["/implement task"] --> P0["Phase 0: Inject project rules"]
-        P0 --> P1["Phase 1: Plan commit units"]
-        P1 --> P12["Phase 2: Implement + commit per unit"]
+        P0 --> P1["Phase 1: Plan commit units, settle commit mode"]
+        P1 --> PM{"Commit mode"}
+        PM -->|"green or readable"| P12["Phase 2: Implement + commit per unit"]
+        PM -->|"no commits"| P12B["Phase 2: Implement, leave uncommitted"]
         P12 --> P3["Phase 3: Validate"]
+        P12B --> P3
     end
 
     P3 --> Validators
@@ -36,7 +39,8 @@ flowchart TB
 
 ## Output Examples
 
-After `/implement` or `/review`, you get both formats:
+After `/implement` or `/review`, you get both formats. The commit fields below belong to `/implement`,
+which owns the checkpoint loop; `/review` omits them.
 
 ### Human-Readable Report
 
@@ -183,9 +187,9 @@ flowchart TB
         DetectLang -->|.go files| GoRules["Load: .claude/rules/go.md<br/>+ .claude/rules/universal.md"]
     end
 
-    subgraph Phase12["Phase 1-2: Plan units, then implement"]
-        Plan[Split work into commit units]
-        Plan --> Impl[Implement and commit one unit at a time]
+    subgraph Phase12["Phase 1-2: Plan units, settle mode, then implement"]
+        Plan[Split work into commit units and settle the commit mode]
+        Plan --> Impl[Implement one unit at a time, committing unless the mode is no commits]
     end
 
     subgraph Phase3["Phase 3: Validate"]
@@ -219,7 +223,7 @@ flowchart TB
     end
 
     subgraph Phase4["Phase 4: Complete"]
-        ValPass -->|Yes| Output["Output JSON:<br/>- applied_rules<br/>- files_changed<br/>- validation_results"]
+        ValPass -->|Yes| Output["Output JSON:<br/>- applied_rules<br/>- files_changed<br/>- commit_mode + commits<br/>- validation_results"]
     end
 
     Start --> P0
@@ -256,8 +260,8 @@ flowchart TD
     end
 
     subgraph Phase12["Phase 1-2: Understand, Implement, Commit"]
-        P12A[Plan commit units]
-        P12B[Implement and commit one unit at a time]
+        P12A[Plan commit units and settle the commit mode]
+        P12B[Implement one unit at a time, committing unless the mode is no commits]
         P12A --> P12B
     end
 
@@ -294,7 +298,7 @@ flowchart TD
     end
 
     subgraph Phase4["Phase 4: Complete"]
-        Output[Output: Rules Applied, Files Changed, Validation Results]
+        Output[Output: Rules Applied, Files Changed, Commit Mode, Commits, Validation Results]
     end
 
     Start["/implement task"] --> Phase0
@@ -466,6 +470,12 @@ Phase 4 combines all validator results into a single output:
     "backend/app/services/auth.py",
     "backend/app/api/routes/auth.py",
     "frontend/src/hooks/useAuth.ts"
+  ],
+  "commit_mode": "green commits",
+  "commits": [
+    "a1b2c3d feat(auth): add AuthService with login and logout",
+    "e4f5a6b feat(auth): expose login and logout endpoints",
+    "c7d8e9f feat(auth): add useAuth hook"
   ],
   "validation": {
     "pass": false,

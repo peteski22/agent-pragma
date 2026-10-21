@@ -187,6 +187,8 @@ When you want implementation with automatic validation. This example assumes `/s
   2. wire helpers into the login form
   Commit mode? green commits / readable commits / no commits
   > green commits
+  (skipped when the task already states a preference; where nobody can answer,
+   defaults to green commits if they are available and readable commits if not)
 
 [Phase 2] Implementing...
   Created: frontend/src/utils/validation.ts
@@ -203,7 +205,8 @@ When you want implementation with automatic validation. This example assumes `/s
 
 [Phase 4] Complete
   Files changed: 2
-  Commits: 2 (green commits)
+  Commit mode: green commits (asked)
+  Commits: 2
   Semantic validators run: 4
   Issues: 0
 ```
@@ -211,9 +214,12 @@ When you want implementation with automatic validation. This example assumes `/s
 ```mermaid
 flowchart TD
     A["/implement add user authentication"] --> B["Phase 0: Rules injected from project rules"]
-    B --> C["Phase 1: Plan commit units, agree commit mode"]
-    C --> C2["Phase 2: Implement and commit one unit at a time"]
+    B --> C["Phase 1: Plan commit units, settle commit mode"]
+    C --> CM{"Commit mode"}
+    CM -->|"green or readable"| C2["Phase 2: Implement and commit one unit at a time"]
+    CM -->|"no commits"| C3["Phase 2: Implement, leave uncommitted"]
     C2 --> D["Phase 3: Linters run (ruff, biome, golangci-lint)"]
+    C3 --> D
     D --> E["Validators run (security, state-machine, language validators)"]
     E --> F{Pass?}
     F -->|No| G["Fix violations"]
