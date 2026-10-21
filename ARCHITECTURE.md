@@ -59,7 +59,10 @@ which owns the checkpoint loop; `/review` omits them.
 - backend/app/api/routes/auth.py: POST /login, POST /logout endpoints
 - frontend/src/hooks/useAuth.ts: useAuth hook with TanStack Query
 
-**Commits:** green commits
+**Commit mode:** green commits
+**Mode determined by:** asked
+
+**Commits:**
 - `a1b2c3d` feat(auth): add AuthService with login and logout
 - `e4f5a6b` feat(auth): expose login and logout endpoints
 - `c7d8e9f` feat(auth): add useAuth hook
@@ -96,11 +99,13 @@ Ready for /review.
     "frontend/src/hooks/useAuth.ts"
   ],
   "commit_mode": "green commits",
+  "commit_mode_source": "asked",
   "commits": [
     "a1b2c3d feat(auth): add AuthService with login and logout",
     "e4f5a6b feat(auth): expose login and logout endpoints",
     "c7d8e9f feat(auth): add useAuth hook"
   ],
+  "planned_units": [],
   "validation": {
     "pass": true,
     "validators": [
@@ -472,11 +477,13 @@ Phase 4 combines all validator results into a single output:
     "frontend/src/hooks/useAuth.ts"
   ],
   "commit_mode": "green commits",
+  "commit_mode_source": "asked",
   "commits": [
     "a1b2c3d feat(auth): add AuthService with login and logout",
     "e4f5a6b feat(auth): expose login and logout endpoints",
     "c7d8e9f feat(auth): add useAuth hook"
   ],
+  "planned_units": [],
   "validation": {
     "pass": false,
     "validators": [

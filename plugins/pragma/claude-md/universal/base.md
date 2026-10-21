@@ -139,10 +139,9 @@ Follow these while writing code.
 
 ### Commit Checkpoints
 
-Commit as you work, not at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone.
+Plan the work as logical units before writing code, and commit as you work rather than at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone. The mode below decides what becomes of the units: green and readable commits make each unit a commit, while no commits keeps them as a reporting plan and commits nothing.
 
-- Plan the logical units of work before writing code. One unit is one commit.
-- Implement one unit at a time, and commit it before starting the next.
+- Implement one unit at a time. Under green or readable commits, commit it before starting the next.
 - Keep each commit self-contained and independently reviewable. Do not mix unrelated changes in a single commit.
 - Each commit is one complete idea. Do not commit work abandoned mid-edit, and split a unit that grows beyond its plan.
 - Write commit messages that explain the "why", not just the "what".

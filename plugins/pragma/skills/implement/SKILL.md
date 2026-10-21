@@ -168,9 +168,9 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
       stash the unrelated changes or to use readable commits instead. Never re-ask, in this phase or any
       later one.
    4. **The session cannot prompt, or the question goes unanswered in this turn.** Use green commits where
-      it is available and readable commits where it is not. Record the mode with "(default, not
-      confirmed)". Do not wait for an answer that cannot arrive, and never default to no commits, because
-      that reproduces the reported defect.
+      it is available and readable commits where it is not, and record the mode as determined by default.
+      Do not wait for an answer that cannot arrive, and never default to no commits, because that
+      reproduces the reported defect.
 
    Do not stash anything without the user's agreement. The mode and the green-commit precondition are both
    settled here; no later phase reopens either.
@@ -321,8 +321,9 @@ Only after validation passes:
 
 1. Summarize what was implemented.
 2. List files changed.
-3. List the commits made, in order, and the commit mode in effect with how it was determined: asked,
-   stated in the task, or defaulted.
+3. List the commits made, in order, the commit mode in effect, and how the mode was determined: asked,
+   stated in the task, defaulted, or no git repository. Where nothing was committed, list the planned
+   units separately from the commits, so a reader cannot mistake a plan for a commit.
 4. List rules that were applied (from Phase 0).
 5. Note any warnings or justified SHOULD violations.
 6. Note any rule conflicts encountered.
@@ -346,11 +347,16 @@ Only after validation passes:
 - file.go: [what changed]
 - file_test.go: [what changed]
 
-**Commits:** green commits | readable commits | no commits (user choice) | none (no git repository)
-[suffix "(default, not confirmed)" where the mode was defaulted; list the planned units where nothing was
-committed]
+**Commit mode:** green commits | readable commits | no commits
+**Mode determined by:** asked | stated in the task | defaulted | no git repository
+
+**Commits:** [omitted under no commits]
 - `abc1234` feat(scope): first logical unit
 - `def5678` feat(scope): second logical unit
+
+**Planned units:** [only under no commits, so the user can split the changeset]
+- feat(scope): first logical unit
+- feat(scope): second logical unit
 
 **Validation:**
 - Linting: ✓ passed

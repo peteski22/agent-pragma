@@ -205,7 +205,8 @@ When you want implementation with automatic validation. This example assumes `/s
 
 [Phase 4] Complete
   Files changed: 2
-  Commit mode: green commits (asked)
+  Commit mode: green commits
+  Mode determined by: asked
   Commits: 2
   Semantic validators run: 4
   Issues: 0
