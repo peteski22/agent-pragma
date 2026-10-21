@@ -182,9 +182,17 @@ When you want implementation with automatic validation. This example assumes `/s
   - .claude/rules/universal.md
   - .claude/rules/typescript.md (scoped to frontend/**)
 
-[Phase 1-2] Implementing...
+[Phase 1] Planned commit units:
+  1. validation helpers
+  2. wire helpers into the login form
+  Commit mode? green commits / readable commits / no commits
+  > green commits
+
+[Phase 2] Implementing...
   Created: frontend/src/utils/validation.ts
+  Committed: a1b2c3d feat(login): add input validation helpers
   Modified: frontend/src/components/LoginForm.tsx
+  Committed: e4f5a6b feat(login): validate fields on submit
 
 [Phase 3] Validating...
   Linters: biome passed, tsc passed
@@ -195,6 +203,7 @@ When you want implementation with automatic validation. This example assumes `/s
 
 [Phase 4] Complete
   Files changed: 2
+  Commits: 2 (green commits)
   Semantic validators run: 4
   Issues: 0
 ```
@@ -202,8 +211,9 @@ When you want implementation with automatic validation. This example assumes `/s
 ```mermaid
 flowchart TD
     A["/implement add user authentication"] --> B["Phase 0: Rules injected from project rules"]
-    B --> C["Phase 1-2: Agent implements following injected rules"]
-    C --> D["Phase 3: Linters run (ruff, biome, golangci-lint)"]
+    B --> C["Phase 1: Plan commit units, agree commit mode"]
+    C --> C2["Phase 2: Implement and commit one unit at a time"]
+    C2 --> D["Phase 3: Linters run (ruff, biome, golangci-lint)"]
     D --> E["Validators run (security, state-machine, language validators)"]
     E --> F{Pass?}
     F -->|No| G["Fix violations"]

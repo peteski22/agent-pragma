@@ -264,7 +264,7 @@ Only after validation passes:
 - file.go: [what changed]
 - file_test.go: [what changed]
 
-**Commits:** (or `skipped - <reason>`, followed by the planned units)
+**Commits:** green commits | readable commits | skipped - [reason, then the planned units]
 - `abc1234` feat(scope): first logical unit
 - `def5678` feat(scope): second logical unit
 

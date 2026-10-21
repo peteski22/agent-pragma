@@ -19,7 +19,8 @@ flowchart TB
 
     subgraph Pipeline["Full Pipeline (/implement)"]
         I["/implement task"] --> P0["Phase 0: Inject project rules"]
-        P0 --> P12["Phase 1-2: Implement"]
+        P0 --> P1["Phase 1: Plan commit units"]
+        P1 --> P12["Phase 2: Implement + commit per unit"]
         P12 --> P3["Phase 3: Validate"]
     end
 
@@ -54,6 +55,11 @@ After `/implement` or `/review`, you get both formats:
 - backend/app/api/routes/auth.py: POST /login, POST /logout endpoints
 - frontend/src/hooks/useAuth.ts: useAuth hook with TanStack Query
 
+**Commits:** green commits
+- `a1b2c3d` feat(auth): add AuthService with login and logout
+- `e4f5a6b` feat(auth): expose login and logout endpoints
+- `c7d8e9f` feat(auth): add useAuth hook
+
 **Validation:**
 | Validator        | Status | Hard | Should | Warn |
 |------------------|--------|------|--------|------|
@@ -66,7 +72,7 @@ After `/implement` or `/review`, you get both formats:
 **Warnings:**
 - security: auth.py:45 - Consider adding rate limiting (advisory)
 
-Ready for /review or commit.
+Ready for /review.
 ```
 
 ### JSON Output (for tooling)
@@ -84,6 +90,12 @@ Ready for /review or commit.
     "backend/app/services/auth.py",
     "backend/app/api/routes/auth.py",
     "frontend/src/hooks/useAuth.ts"
+  ],
+  "commit_mode": "green commits",
+  "commits": [
+    "a1b2c3d feat(auth): add AuthService with login and logout",
+    "e4f5a6b feat(auth): expose login and logout endpoints",
+    "c7d8e9f feat(auth): add useAuth hook"
   ],
   "validation": {
     "pass": true,
@@ -171,8 +183,9 @@ flowchart TB
         DetectLang -->|.go files| GoRules["Load: .claude/rules/go.md<br/>+ .claude/rules/universal.md"]
     end
 
-    subgraph Phase12["Phase 1-2: Implement"]
-        Impl[Work done following injected rules]
+    subgraph Phase12["Phase 1-2: Plan units, then implement"]
+        Plan[Split work into commit units]
+        Plan --> Impl[Implement and commit one unit at a time]
     end
 
     subgraph Phase3["Phase 3: Validate"]
@@ -210,7 +223,7 @@ flowchart TB
     end
 
     Start --> P0
-    PyRules & TSRules & GoRules --> Impl
+    PyRules & TSRules & GoRules --> Plan
     Impl --> Phase3
 ```
 
@@ -242,8 +255,10 @@ flowchart TD
         P0A --> P0B --> P0C --> P0D --> P0E
     end
 
-    subgraph Phase12["Phase 1-2: Understand & Implement"]
-        P12[Work done following injected rules]
+    subgraph Phase12["Phase 1-2: Understand, Implement, Commit"]
+        P12A[Plan commit units]
+        P12B[Implement and commit one unit at a time]
+        P12A --> P12B
     end
 
     subgraph Phase3["Phase 3: Validate"]
