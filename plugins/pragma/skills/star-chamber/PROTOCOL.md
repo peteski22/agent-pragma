@@ -214,6 +214,17 @@ SC_TMPDIR="<literal path from mktemp output>"; grep -v -E '(node_modules|vendor|
 SC_TMPDIR="<literal path from mktemp output>"; sort -u "$SC_TMPDIR/filtered.txt" > "$SC_TMPDIR/files.txt"
 ```
 
+Record the unfiltered set as well, so Step 4 can report what the review left out:
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; sort -u "$SC_TMPDIR/raw-files.txt" > "$SC_TMPDIR/changed.txt"
+```
+
+```bash
+SC_TMPDIR="<literal path from mktemp output>"; wc -l < "$SC_TMPDIR/changed.txt"; wc -l < "$SC_TMPDIR/files.txt"
+```
+
+**Capture both counts** for the Step 4 scope line. `changed.txt` holds every changed file and `files.txt` holds the review targets. A review that covered part of the change reads exactly like one that covered all of it unless the two are reported against each other.
+
 The file list at `$SC_TMPDIR/files.txt` is used by Step 2 for path-scoped rule matching and by Step 3 as review targets.
 
 ## Step 2: Gather Context
@@ -356,6 +367,7 @@ Parse the JSON output from Step 3 and present using the appropriate format below
 ## Star-Chamber Review
 
 **Files:** {list of files reviewed}
+**Scope:** {N} of {M} changed files reviewed; {M - N} excluded ({generated, vendor, caller-narrowed})
 **Providers:** {providers_used from JSON}
 
 ### Consensus Issues (All Providers Agree)
