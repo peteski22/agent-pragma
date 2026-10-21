@@ -132,10 +132,40 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
      4. If the existing codebase has states where "terminal" means "UI considers it done" but runtime processes continue, note this in the Phase 4 report and ensure new code does not compound the problem.
 3. Identify files that need changes based on discovered patterns.
 4. **Plan the commit units.** Split the work into logical units, where each unit is one self-contained,
-   independently reviewable change. Order them so that each unit leaves the tree working: shared types and
-   helpers before the code that consumes them. Record the list for Phase 2.
+   independently reviewable change. Order them by dependency: shared types and helpers before the code that
+   consumes them. Record the list for Phase 2.
 
    A task touching one concern is one unit. Do not invent units to pad the history.
+5. **Determine the commit mode.** The mode governs every committing step in Phases 2 and 3, so settle it
+   here, while the plan is fresh and before any code is written. The three modes are:
+
+   - **Green commits** → each unit is committed only once the committed tree passes the project's
+     deterministic checks. Every commit passed the project's checks when it was made.
+   - **Readable commits** → each unit is committed as one coherent idea without passing on its own. Only
+     the branch tip has to pass. Commits read better in review, at the cost of bisect and of building an
+     intermediate commit.
+   - **No commits** → every unit is implemented without committing, and the planned units are reported so
+     the user can split the changeset themselves.
+
+   Settle the mode in this order, and stop at the first case that applies:
+
+   1. **Commits are impossible.** Phase 0 reported that this is not a git repository. Use no commits,
+      record the reason as "no git repository", and do not ask.
+   2. **The task already states a preference.** The task text or the current session already asks for a
+      particular behavior, for example "commit as you go", "atomic commits please", or "one commit only".
+      Adopt the matching mode, state which mode you adopted and why, and do not ask. Re-asking a question
+      the user has already answered is the defect this phase exists to prevent.
+   3. **Ask.** State the planned units so the decision is informed, name the commit rules you will follow,
+      and wait for the answer. Ask at most once per run; never re-ask between units.
+   4. **No answer is available.** The run is non-interactive, or the user does not answer. Use green
+      commits, proceed, and record the mode as "green commits (default, not confirmed)". Never default to
+      no commits, because that reproduces the reported defect.
+
+   Then re-split or re-order the remaining units for the chosen mode. Under green commits, fold a unit
+   together with whatever it needs to pass its own checks, including its tests and its call sites. Under
+   readable commits, keep the smaller coherent units.
+
+   Record the mode and how it was determined for the Phase 4 report.
 
 ---
 
@@ -144,23 +174,8 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
 Work through the commit units from Phase 1 one at a time. Each unit is implemented, checked, and committed
 before the next one starts.
 
-**Before the first unit:**
-
-1. Resolve the deterministic check commands once, using the precedence rules in Phase 3 Step 1.
-2. Ask the user how to commit, and wait for the answer. State the planned units from Phase 1 so the
-   decision is informed, and name the commit rules you will follow. Ask once per run; do not re-ask between
-   units. Offer these three answers:
-
-   - **Green commits** → commit each unit only once its own checks pass. Every commit stays bisectable.
-   - **Readable commits** → commit each unit as one coherent idea without requiring it to pass on its own,
-     then make the branch tip pass before Phase 4 completes. This keeps commits easier to review, at the
-     cost of bisect and of building an intermediate commit.
-   - **No commits** → implement every unit without committing, then list the planned units in the Phase 4
-     report so the user can split the changeset themselves.
-
-   Skip the question when git steps were skipped in Phase 0, because there is nothing to commit to.
-
-   Record the chosen mode for the Phase 4 report.
+**Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
+Phase 3 Step 1. The commit mode was settled in Phase 1 Step 5.
 
 For each unit, in the planned order:
 
