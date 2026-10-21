@@ -177,6 +177,12 @@ next one starts, and committed unless the mode from Phase 1 Step 5 is no commits
 **Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
 Phase 3 Step 1. The commit mode was settled in Phase 1 Step 5.
 
+**Under green commits, confirm the mode is still available.** The per-unit check runs in the working tree
+immediately after the commit, so the tree equals the commit and the check covers the committed content. That
+holds only while the tree carries nothing else. If Phase 0 left unrelated uncommitted changes there, say so
+and offer to stash them, or to fall back to readable commits. Do not stash anything without the user's
+agreement.
+
 For each unit, in the planned order:
 
 1. Make the code changes for that unit only.
@@ -184,7 +190,11 @@ For each unit, in the planned order:
 3. Keep changes focused - don't over-engineer.
 4. Then take the branch for the mode settled in Phase 1 Step 5:
    - **Green commits** → stage only the files belonging to the unit, commit it, run the deterministic
-     checks, and fix failures with `git commit --amend` until they pass.
+     checks, and fix failures with `git commit --amend` until they pass. Committing first is what makes the
+     check cover the committed tree rather than a dirty one. Scope the command to the unit's files where it
+     supports file arguments, and run it whole where it does not, as `make lint` and
+     `pre-commit run --all-files` do. Treat failures in files the unit did not touch as pre-existing:
+     report them, leave them alone, and do not let them block the commit.
    - **Readable commits** → stage only the files belonging to the unit and commit it. Leave the checks to
      Phase 3.
    - **No commits** → leave the unit's changes in the working tree, stage nothing, and move on.
