@@ -131,22 +131,147 @@ The "Pre-Implementation Setup" section of the loaded rules contains **actions to
      3. Check whether entering a terminal state creates a cancellation signal or cleanup action, not just a status label.
      4. If the existing codebase has states where "terminal" means "UI considers it done" but runtime processes continue, note this in the Phase 4 report and ensure new code does not compound the problem.
 3. Identify files that need changes based on discovered patterns.
+4. **Plan the commit units.** Split the work into logical units, where each unit is one self-contained,
+   independently reviewable change. Order them by dependency: shared types and helpers before the code that
+   consumes them. Record the list for Phase 2.
+
+   A task touching one concern is one unit. Do not invent units to pad the history.
+5. **Determine the commit mode.** The mode governs every committing step in Phases 2 and 3, so settle it
+   here, while the plan is fresh and before any code is written. The three modes are:
+
+   - **Green commits** → each unit is committed only once the committed tree passes the project's
+     deterministic checks. Every commit passed the project's checks when it was made.
+   - **Readable commits** → each unit is committed as one coherent idea without passing on its own. Only
+     the branch tip has to pass. Commits read better in review, at the cost of bisect and of building an
+     intermediate commit.
+   - **No commits** → every unit is implemented without committing, and the planned units are reported so
+     the user can split the changeset themselves.
+
+   First establish whether green commits is available. It needs a working tree that carries nothing but
+   the work in progress, because the per-unit check runs there. If Phase 0 retained unrelated uncommitted
+   changes, green commits is unavailable until they are stashed, and the one question below is where that
+   is resolved.
+
+   Then settle the mode. The cases are mutually exclusive, so take the one that applies:
+
+   1. **Commits are impossible.** Phase 0 reported that this is not a git repository. Use no commits and
+      record the reason as "no git repository".
+   2. **The task already states a preference.** The task text or the current session already asks for a
+      particular behavior, for example "commit as you go", "atomic commits please", or "leave the changes
+      uncommitted". Adopt the matching mode and state which mode you adopted and why. Re-asking a question
+      the user has already answered is the defect this phase exists to prevent. Where the stated
+      preference is green commits and green commits is unavailable, ask whether to stash the unrelated
+      changes or to use readable commits instead. That question settles the precondition, not the mode.
+      Do not report green commits until the tree carries nothing but the work in progress.
+   3. **The session can prompt the user.** Ask once. State the planned units so the decision is informed,
+      name the commit rules you will follow, and say so where green commits is unavailable, offering to
+      stash the unrelated changes or to use readable commits instead. Never re-ask, in this phase or any
+      later one.
+   4. **The session cannot prompt, or the question goes unanswered in this turn.** Use green commits where
+      it is available and readable commits where it is not, and record the mode as determined by default.
+      Do not wait for an answer that cannot arrive, and never default to no commits, because that
+      reproduces the reported defect.
+
+   Do not stash anything without the user's agreement. The mode and the green-commit precondition are both
+   settled here; no later phase reopens either.
+
+   Then re-split or re-order the remaining units for the chosen mode. Under green commits, fold a unit
+   together with whatever it needs to pass its own checks, including its tests and its call sites. Under
+   readable commits, keep the smaller coherent units.
+
+   Record the mode and how it was determined for the Phase 4 report.
 
 ---
 
 ## Phase 2: Implement
 
-1. Make the necessary code changes.
+Work through the commit units from Phase 1 one at a time. Each unit is implemented before the next one
+starts, and committed unless the mode from Phase 1 Step 5 is no commits. Green commits checks each unit at
+its own checkpoint; readable and no commits leave every check to Phase 3, which validates the complete
+change under all three modes.
+
+**Before the first unit:** resolve the deterministic check commands once, using the precedence rules in
+Phase 3 Step 1. Under readable commits, also record the commit HEAD points at now, because Phase 3 needs
+that commit as the base of its rebase. Under green commits Phase 3 commits at the tip and needs no base,
+and under no commits there is nothing to rebase. The commit mode was settled in Phase 1 Step 5.
+
+**Under green commits, verify the precondition Phase 1 settled.** The per-unit check runs in the working
+tree immediately after the commit, so the tree equals the commit and the check covers the committed content.
+That holds only while the tree carries nothing but the work in progress. If unrelated changes are present
+after all, stop and report it. Do not reopen the mode question here.
+
+For each unit, in the planned order:
+
+1. Make the code changes for that unit only.
 2. Follow the rules loaded in Phase 0.
 3. Keep changes focused - don't over-engineer.
+4. Then take the branch for the mode settled in Phase 1 Step 5:
+   - **Green commits** → stage only the files belonging to the unit and commit it. Committing first is
+     what makes the check cover the committed tree rather than a dirty one. Then run the deterministic
+     checks and repeat until the check passes and the working tree is clean against the commit. A command
+     that rewrites files and still exits zero leaves the tree ahead of the commit, so stage the rewrites in
+     the unit's own files and `git commit --amend`, then run the command again. Where the command also
+     rewrote files the unit did not touch, keep them out of the unit commit: commit them on their own and
+     report it. Folding them in puts unrelated work in the unit commit, and discarding them throws away a
+     change the project's own command made. Scope the command to the unit's files where it
+     supports file arguments, and run it whole where it does not, as `make lint` and
+     `pre-commit run --all-files` do. A failure in a file the unit did not touch is pre-existing only where
+     that is established, for example because the same failure is present at the base commit; report it and
+     leave it alone. Otherwise treat it as caused by the unit. **If a failure cannot be made to pass**, stop
+     before the next unit, report that the commit is not green, and ask for guidance.
+   - **Readable commits** → stage only the files belonging to the unit and commit it. Leave the checks to
+     Phase 3.
+   - **No commits** → leave the unit's changes in the working tree, stage nothing, and move on.
+5. Under green or readable commits, record the commit hash and subject for the Phase 4 report. Under no
+   commits, record the unit as completed instead.
+
+Every commit message explains the "why", not just the "what".
+
+**Declining a new branch does not disable committing.** Phase 0 asks about branches, and a user who
+continues on an existing feature branch can commit normally. Only an absent git repository makes committing
+impossible, and Phase 1 Step 5 already resolves that case to no commits.
+
+**If a commit itself fails**, stop before the next unit. A valid repository still rejects a commit for
+reasons that have nothing to do with the mode, such as an unset identity, a failed signature, or a hook
+that refuses the change. Report the command's error alongside the units already committed, and ask for
+guidance. Do not implement further units, and do not fall back to no commits on your own.
+
+**If a unit grows beyond its plan**, split it. Commit the finished part rather than letting the unit absorb
+unrelated work.
+
+**If the unit plan proves wrong** (a unit is not independently reviewable, or the order breaks the tree),
+re-plan the remaining units and note the change in the Phase 4 report.
 
 ---
 
 ## Phase 3: Validate
 
-After implementation is complete, run validation.
+After every unit is implemented, validate the complete change. Under green commits this catches problems
+that only appear across units. Under readable commits and no commits it is the only deterministic gate, so
+the result must pass everything here before Phase 4.
 
 **Before running validators:** Re-check whether any new directories were introduced during implementation. If so, repeat Phase 0 for those directories and include any newly discovered rules.
+
+**Every change this phase makes is committed under the mode from Phase 1 Step 5.** That covers the fixes you
+write and the edits the commands make themselves, because the configured defaults include `--fix` and
+formatting commands that rewrite files and still exit zero. After each command, check the working tree:
+
+- **Green commits** → put the change in a new commit at the tip, then re-run the deterministic checks.
+  Amend only where the commit you are correcting is already the tip and has not been pushed. Never rewrite
+  an earlier unit commit here: `git commit --amend` reaches only the tip, and rebasing to reach further
+  back rewrites every descendant, whose checks ran against different content. A tip commit keeps the claim
+  that each commit passed its checks when it was made. Cleaning the history up afterwards is review work,
+  not validation work, and the universal rules cover it.
+- **Readable commits** → use `git commit --fixup=<that commit>` where the change corrects one earlier
+  commit of this run, and an ordinary commit otherwise. Before Phase 4, absorb the fixups with
+  `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <base>`, where `<base>` is the commit HEAD pointed
+  at before Phase 2 began. Record that commit at the start of Phase 2; a bare `--autosquash` has no target
+  and fails on a branch with no upstream, which is what Phase 0 just created. Where any commit to be
+  rewritten has already been pushed, ask the user before rewriting it, and keep an ordinary tip commit
+  instead if they decline.
+- **No commits** → leave every change in the working tree.
+
+Record every commit this phase creates, and every hash a rewrite replaces, alongside the Phase 2 ledger.
 
 1. **Run linters first** (deterministic checks):
 
@@ -163,7 +288,7 @@ After implementation is complete, run validation.
 
    **Priority order:** Local supplements > path-scoped language rules > universal rules > built-in defaults. Local supplements have the highest priority to allow per-machine customization without modifying version-controlled rules.
 
-   Fix any issues before proceeding.
+   Fix any issues before proceeding, and commit the fixes under the rule above.
 
 2. **Run semantic validators** (LLM checks):
    - Use the Task tool to spawn validators in parallel. For each validator, create a Task with `subagent_type: "general-purpose"` and a prompt instructing the subagent to invoke the validator skill via the Skill tool (e.g., `skill: "security"`) and return the JSON result verbatim.
@@ -182,6 +307,7 @@ After implementation is complete, run validation.
    - HARD violations: must fix.
    - SHOULD violations: fix or justify.
    - WARN: note but don't block.
+   - Commit each round of fixes under the rule above.
 
 4. **Re-validate** if fixes were made.
 
@@ -195,9 +321,13 @@ Only after validation passes:
 
 1. Summarize what was implemented.
 2. List files changed.
-3. List rules that were applied (from Phase 0).
-4. Note any warnings or justified SHOULD violations.
-5. Note any rule conflicts encountered.
+3. List the commits made, in order, the commit mode in effect, and how the mode was determined: asked,
+   stated in the task, defaulted, or no git repository. Where nothing was committed, list the planned
+   units separately from the commits, so a reader cannot mistake a plan for a commit.
+4. List rules that were applied (from Phase 0).
+5. Note any warnings or justified SHOULD violations.
+6. Note any rule conflicts encountered.
+7. Note any change to the Phase 1 unit plan, and any reason commits were skipped.
 
 ## Output Format
 
@@ -217,6 +347,17 @@ Only after validation passes:
 - file.go: [what changed]
 - file_test.go: [what changed]
 
+**Commit mode:** green commits | readable commits | no commits
+**Mode determined by:** asked | stated in the task | defaulted | no git repository
+
+**Commits:** [omitted under no commits]
+- `abc1234` feat(scope): first logical unit
+- `def5678` feat(scope): second logical unit
+
+**Planned units:** [only under no commits, so the user can split the changeset]
+- feat(scope): first logical unit
+- feat(scope): second logical unit
+
 **Validation:**
 - Linting: ✓ passed
 - Security: ✓ passed (no HARD, no unexplained SHOULD)
@@ -229,12 +370,16 @@ Only after validation passes:
 **Warnings:**
 - [any WARN items to be aware of]
 
-Ready for review or commit.
+Ready for review.
 ```
 
 ## Rules
 
 - Phase 0 is mandatory. Do NOT skip rule injection.
+- Plan commit units in Phase 1 and settle the commit mode there. Under green or readable commits, commit
+  every unit. Under no commits, commit nothing. Do NOT batch agreed work into a single commit, do NOT
+  re-ask per unit, and do NOT commit anything once the user has chosen no commits.
+- Under readable commits, do NOT report completion while the branch tip fails.
 - Do NOT skip validation.
 - Do NOT say "done" until validation passes.
 - Do NOT ignore HARD or SHOULD violations.

@@ -137,6 +137,28 @@ Follow these while writing code.
 - Apply the minimal change required to make the failing test pass.
 - Skip test-first only when the cost clearly outweighs the benefit (exploratory prototyping, pure configuration, cosmetic changes).
 
+### Commit Checkpoints
+
+Plan the work as logical units before writing code, and commit as you work rather than at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone. The mode below decides what becomes of the units: green and readable commits make each unit a commit, while no commits keeps them as a reporting plan and commits nothing.
+
+- Implement one unit at a time. Under green or readable commits, commit it before starting the next.
+- Keep each commit self-contained and independently reviewable. Do not mix unrelated changes in a single commit.
+- Each commit is one complete idea. Do not commit work abandoned mid-edit, and split a unit that grows beyond its plan.
+- Write commit messages that explain the "why", not just the "what".
+
+All three checkpoint modes below are valid. Default to green commits, and ask only where the task leaves the choice genuinely unclear.
+
+| Mode | Rule | Cost |
+|------|------|------|
+| **Green commits** | Every commit passed the project's deterministic checks when it was made. | Code, tests, and call sites often have to land together, which makes larger commits. |
+| **Readable commits** | Every commit is one coherent idea. Intermediate commits may fail; the branch tip must pass. | `git bisect` and a build from an intermediate commit do not work. |
+| **No commits** | The user asked for a single changeset. Nothing is committed. | The user splits the changeset themselves, so report the units you planned. |
+
+- **NOTE:** Under green commits, commit the unit before you run its checks. The working tree then equals the commit, so the checks cover the committed content. Checking first proves nothing about the commit, because a check run in a dirty tree can pass on edits the commit does not carry.
+- Under green commits, a unit includes whatever it needs to pass, so a failing test and the change that satisfies it are one unit.
+- Under readable commits, run the full checks on the branch tip before review. Do not open a Pull Request from a branch whose tip fails.
+- A workflow that manages commits, such as the `implement` skill, settles the mode and owns the checkpoint loop. Outside such a workflow, do not infer permission to commit; follow the user's explicit instructions.
+
 ### Design Principles
 
 - Prefer deep modules: simple interfaces that hide complex implementations. A module that exposes most of its complexity through its interface adds overhead without reducing cognitive load.
@@ -185,23 +207,23 @@ Verify these before marking work as done.
 - Run linting and formatting checks before considering work complete. Do not ship changes that fail lint or format checks.
 - If full-suite checks are expensive, run targeted checks and note what was skipped.
 
-### Commits
-
-- Follow atomic commit principles:
-  - Each commit should represent one logical change.
-  - Commits should be self-contained and independently reviewable.
-  - Don't mix unrelated changes in a single commit.
-  - Don't commit half-finished work; use stash if needed.
-- Commit each logical unit of work as it is completed, not at the end. Retroactively splitting a large changeset into atomic commits is painful and error-prone (repeated stash/apply cycles across files). Committing as you go produces a clean, reviewable history naturally.
-- Write clear commit messages that explain the "why", not just the "what".
-
 ### Pull Requests
 
 - Push feature branches and create Pull Requests to merge into `main`.
 - Keep PRs focused; large PRs are hard to review.
 - Link PRs to issues using keywords: `Fixes #123`, `Closes #456`.
 - Rebase feature branches onto `main` before merging to keep history linear.
-- Squash commits if the PR contains fixup commits; preserve meaningful commit history otherwise.
+- Absorb fixup commits with `git rebase --autosquash` before merging. Preserve meaningful commit history otherwise, and do not collapse planned units into one commit.
+
+### Review Feedback
+
+Feedback arrives once the work is done, so answering it is the moment to repair the history rather than to extend it. A branch that grows a commit per review comment stops telling the reader what changed and why.
+
+- Fold a change that corrects an existing commit back into that commit. Use `git commit --fixup=<commit>`, then absorb the fixups with `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <base>`, where `<base>` is the commit the branch started from.
+- Make a genuinely new concern its own commit. Fixups are for correcting a unit, not for adding to it.
+- Rewriting commits that are already pushed needs a force push. Confirm with the user first, and push with `--force-with-lease` so a concurrent push is not overwritten.
+- Do not rewrite a commit someone else has built on. Add an ordinary commit instead.
+- **NOTE:** This is deliberate history repair, directed by a human who has read the branch. An unsupervised agent fixing its own validation failures mid-task must not rewrite history, because it cannot re-establish that every rewritten commit still passes its checks.
 
 ---
 
