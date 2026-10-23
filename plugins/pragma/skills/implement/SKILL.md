@@ -284,7 +284,9 @@ Record every commit this phase creates, and every hash a rewrite replaces, along
    If custom commands exist at any level, use the highest-precedence match. Otherwise, check for a Makefile with `lint`/`test` targets and use those. If no Makefile targets exist, fall back to these defaults:
    - Go: `golangci-lint run --fix -v`
    - Python: `uv run pre-commit run --all-files`
-   - TypeScript: `pnpm run lint` or `npx biome check .`
+   - TypeScript: `pnpm run lint` or `npx --no biome check .`
+
+   `--no` restricts the command to a biome already installed in the project. Where none is installed the command refuses, and the right response is to skip TypeScript linting rather than drop the flag.
 
    **Priority order:** Local supplements > path-scoped language rules > universal rules > built-in defaults. Local supplements have the highest priority to allow per-machine customization without modifying version-controlled rules.
 
