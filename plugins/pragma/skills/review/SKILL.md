@@ -74,8 +74,10 @@ uv run pre-commit run --all-files 2>&1 | tail -50
 **TypeScript:**
 ```bash
 pnpm run lint 2>&1 | tail -50
-# or: npx biome check . 2>&1 | tail -50
+# or: npx --no biome check . 2>&1 | tail -50
 ```
+
+`--no` restricts the command to a biome already installed in the project. Where none is installed the command refuses, and the right response is to skip TypeScript linting rather than drop the flag.
 
 Report linter results. If linters fail, report and stop - fix these first.
 
