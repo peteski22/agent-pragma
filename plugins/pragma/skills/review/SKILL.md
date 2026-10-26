@@ -63,21 +63,23 @@ If no custom commands found, use these defaults based on file types:
 
 **Go:**
 ```bash
-golangci-lint run -v 2>&1 | tail -50
+set -o pipefail; golangci-lint run -v 2>&1 | tail -50
 ```
 
 **Python:**
 ```bash
-uv run pre-commit run --all-files 2>&1 | tail -50
+set -o pipefail; uv run pre-commit run --all-files 2>&1 | tail -50
 ```
 
 **TypeScript:**
 ```bash
-pnpm run lint 2>&1 | tail -50
-# or: npx --no biome check . 2>&1 | tail -50
+set -o pipefail; pnpm run lint 2>&1 | tail -50
+# or: set -o pipefail; npx --no biome check . 2>&1 | tail -50
 ```
 
 `--no` restricts the command to a biome already installed in the project. Where none is installed the command refuses, and the right response is to skip TypeScript linting rather than drop the flag.
+
+`tail` is the last command in each pipeline, so without `pipefail` the pipeline reports `tail`'s exit status and a failing linter looks like a pass. Keep `set -o pipefail` on the same line as the pipeline, because shell state does not carry from one Bash call to the next.
 
 Report linter results. If linters fail, report and stop - fix these first.
 
