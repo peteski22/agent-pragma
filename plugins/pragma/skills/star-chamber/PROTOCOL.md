@@ -386,6 +386,8 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.9.0' star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
 ```
 
+The council asks one member to write the session assessment after the rounds finish, so a session makes one provider call more than it has members, and a session where two calls time out is the worst case rather than one. `--no-synthesis` on either command skips it and spends no extra call, leaving `summary.synthesis` empty, and the config key `"synthesis"` sets the default.
+
 **Non-debate mode:** Do NOT redirect stdout to a file — the JSON is consumed directly from the Bash tool response in Step 4.
 
 **Important:** Keep the `uvx` command on a **single line**. Do NOT use `\` line continuations — they break under Claude Code's Bash tool.
@@ -403,7 +405,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
 - `reviews` — full individual provider reviews with `raw_content`.
 - `failed_providers` — providers that errored (with error messages).
-- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, `consensus_count` and `majority_count` count the first two of them, and `synthesis` holds the prose.
+- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, and `consensus_count` and `majority_count` count the first two of them. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable.
 
 **Design question** (`mode: "design-question"`) output fields:
 - `providers_used` — every provider asked, including any that then failed.
@@ -412,7 +414,7 @@ SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=
 - `approaches` — every approach any provider named, merged by name across providers, with `name`, `pros`, `cons`, `risk_level`, `fit_rating` and a `recommended_by` count. One entry is one approach the council weighed: the names are matched ignoring case, punctuation and spacing, the pros and cons are the union of what every provider naming it said, and `risk_level` and `fit_rating` take the value the most providers stated, resolving a tie toward the more cautious one. `recommended_by` counts the providers whose own recommendation names that approach.
 - `consensus_recommendation` — the one direction every provider that answered recommended, where the council could identify one. It fires on recommendation prose every provider shares and on a single approach every provider names. Absence still does not mean they disagreed: providers who agree on a direction while recommending different approaches within it yield nothing here.
 - `failed_providers` — providers that errored.
-- `summary` — an object, not prose. `synthesis` holds the prose. The count fields are code-review only and are absent here.
+- `summary` — an object, not prose, carrying `synthesis`, `synthesized_by` and `synthesis_error` with the meanings above. The count fields are code-review only and are absent here.
 
 Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.9.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.9.0' star-chamber schema list`.
 
@@ -470,7 +472,7 @@ Issues raised by a single provider. May be valid specialized insights.
 |----------|---------------|--------------|
 | {name}   | {rating}      | {count}      |
 
-**Overall:** {summary.synthesis from JSON}
+**Overall ({summary.synthesized_by}'s assessment):** {summary.synthesis from JSON}
 ```
 
 ### Design Question Format
@@ -497,7 +499,7 @@ Issues raised by a single provider. May be valid specialized insights.
 
 ### Summary
 
-**Overall:** {summary.synthesis from JSON}
+**Overall ({summary.synthesized_by}'s assessment):** {summary.synthesis from JSON}
 ```
 
 **Presentation guidelines:**
@@ -510,6 +512,7 @@ Issues raised by a single provider. May be valid specialized insights.
 - Do not report disagreement because `consensus_recommendation` is absent. The field fires where every provider's recommendation prose points one way and where every provider names one same approach, and neither holds when providers share a direction while recommending different approaches within it, which is a common outcome among providers who agree. Read the approaches, say whether they point the same way, and say that the reading is yours rather than the council's.
 - Do not group the approaches again. The council merges them by name, so each entry already carries the pros and cons of every provider that named it, and the number of entries is the number of approaches the council weighed. Two entries can still describe one idea under different names, because the merge matches names rather than meanings. Saying so is worth reporting, but report it as a reading of the entries and leave the entries and the counts as the council produced them.
 - Report `recommended_by` as the council derived it, including zero. Zero means the approach was raised and discussed and then recommended by nobody, which is a finding rather than missing data, so report it instead of omitting the line. Where every approach carries zero, no provider's recommendation named an approach the council could match to one it had raised, and saying that is more use to a reader than silence.
+- Attribute the overall assessment to the member that wrote it. `summary.synthesis` is one member's view, written blind to which member said what, and not a position the council took, so `summary.synthesized_by` belongs in the line that reports it. Where `synthesis` is empty, report what `summary.synthesis_error` says, or that no member could be asked where it is null, rather than printing the heading with nothing under it.
 - Report the counts from `summary` as the council computed them. They describe the groupings the tool produced, before any grouping done by hand, so a report that groups issues by hand may show fewer issues than `total_issues` counts. Say that the grouping was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-grouped set as the council's own result.
 
 ## Debate Mode
@@ -807,5 +810,6 @@ This shows all configured providers, their models, and connection status (direct
 
 Each invocation calls all configured providers. With 3 providers reviewing ~2000 tokens:
 - ~$0.02-0.10 per invocation depending on models.
+- The closing assessment calls one provider again after the rounds, so an invocation makes one call more than it has providers. `--no-synthesis` removes it.
 - Basic mode (no debate) is used when auto-invoked to keep costs predictable.
 - Debate mode multiplies cost by the number of rounds.
