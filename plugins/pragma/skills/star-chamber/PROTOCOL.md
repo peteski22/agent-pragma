@@ -452,9 +452,9 @@ Parse the JSON output from Step 3 and present using the appropriate format below
 
 Where the individual issues hold what is plainly one defect, cited in differing forms, group them by hand. Say in the report that the grouping was done by hand, and do not present a hand-grouped set as consensus the tool reported.
 
-**Consensus can also overstate agreement, and that failure is silent.** The grouping key is the file, the line span and the category. It does not include what a member said. Two members describing different defects at one line under one category therefore group, and the group keeps one member's description and discards the rest. A discarded description reaches no field of the output, neither `individual_issues` nor the summary, so nothing marks the loss. A consensus entry is evidence that several members cited one place under one category. It is not evidence that they described one defect.
+**Consensus can also overstate agreement, and the groupings do not show it.** The grouping key is the file, the line span and the category. It does not include what a member said. Two members describing different defects at one line under one category therefore group, and the group keeps one member's description and discards the rest. The discarded description is absent from `consensus_issues`, `majority_issues` and `individual_issues` alike, and neither the groupings nor `summary` records that a description was dropped. A consensus entry is evidence that several members cited one place under one category. It is not evidence that they described one defect.
 
-Before relying on a consensus entry where being wrong is costly, read each contributing member's `raw_content` and confirm the members described the same defect. Where they did not, report the defects separately and say the entry was split by hand.
+The dropped text is still in the document. Before relying on a consensus entry where being wrong is costly, compare `reviews[].issues` for the members that contributed it, which carries every member's own description as a structured field and needs no reparsing of `raw_content`. Where the members described different defects, report them separately and say the entry was split by hand.
 
 ### Code Review Format
 
