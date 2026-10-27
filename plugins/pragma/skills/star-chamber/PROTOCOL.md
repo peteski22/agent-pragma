@@ -403,7 +403,7 @@ The council asks one member to write the session assessment after the rounds fin
 - `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over.
-- `consensus_issues` — issues every provider that answered agreed on (address first).
+- `consensus_issues` — issues every provider that answered cited at one place under one category (address first). Agreement on the place is not agreement on the defect, as the note on overstating below explains.
 - `majority_issues` — issues flagged by more than one provider that answered, but not all of them (includes `flagged_by` list).
 - `individual_issues` — issues from single providers, keyed by provider name.
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
@@ -451,6 +451,10 @@ Parse the JSON output from Step 3 and present using the appropriate format below
 **Consensus can still understate agreement.** The council groups two issues when they name the same file and the same category, and their cited line spans overlap or sit within five lines of each other. A citation that names no line, and one whose range covers more than fifty lines, both cite the file rather than a place within it, and a file-level citation never groups with a specific line. Two members can also file one defect under different categories. In either case a defect every member raised lands in `individual_issues`, with the consensus list empty or holding something else.
 
 Where the individual issues hold what is plainly one defect, cited in differing forms, group them by hand. Say in the report that the grouping was done by hand, and do not present a hand-grouped set as consensus the tool reported.
+
+**Consensus can also overstate agreement, and that failure is silent.** The grouping key is the file, the line span and the category. It does not include what a member said. Two members describing different defects at one line under one category therefore group, and the group keeps one member's description and discards the rest. A discarded description reaches no field of the output, neither `individual_issues` nor the summary, so nothing marks the loss. A consensus entry is evidence that several members cited one place under one category. It is not evidence that they described one defect.
+
+Before relying on a consensus entry where being wrong is costly, read each contributing member's `raw_content` and confirm the members described the same defect. Where they did not, report the defects separately and say the entry was split by hand.
 
 ### Code Review Format
 
