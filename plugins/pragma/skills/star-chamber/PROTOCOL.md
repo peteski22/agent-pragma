@@ -513,8 +513,8 @@ Issues raised by a single provider. May be valid specialized insights.
 - **Recommended by:** {recommended_by} of the providers that answered
 - **Pros:** {pros}
 - **Cons:** {cons}
-- **Risk:** {risk_level}
-- **Fit:** {fit_rating}
+- **Risk:** {risk_level — or that no member rated the risk, where this reads `unknown`}
+- **Fit:** {fit_rating — or that no member assessed the fit, where this is null}
 
 ### Summary
 
@@ -532,6 +532,7 @@ Issues raised by a single provider. May be valid specialized insights.
 - Do not report disagreement because `consensus_recommendation` is absent. The field fires where every provider's recommendation prose points one way and where every provider names one same approach, and neither holds when providers share a direction while recommending different approaches within it, which is a common outcome among providers who agree. Read the approaches, say whether they point the same way, and say that the reading is yours rather than the council's.
 - Do not group the approaches again. The council merges them by name, so each entry already carries the pros and cons of every provider that named it, and the number of entries is the number of approaches the council weighed. Two entries can still describe one idea under different names, because the merge matches names rather than meanings. Saying so is worth reporting, but report it as a reading of the entries and leave the entries and the counts as the council produced them.
 - Report `recommended_by` as the council derived it, including zero. Zero means the approach was raised and discussed and then recommended by nobody, which is a finding rather than missing data, so report it instead of omitting the line. Where every approach carries zero, no provider's recommendation named an approach the council could match to one it had raised, and saying that is more use to a reader than silence.
+- Do not print the council's own placeholder as though a member chose it. `risk_level` reads `unknown`, and `fit_rating` is null, where no member rated or assessed that approach, and a member may send neither value. Write that no member rated it. An `unknown` printed as a risk level reads as a member judging the risk unknowable, which is a different claim from nobody having judged it, and a null printed as a fit reads as a defect in the report.
 - Attribute the overall assessment to the member that wrote it, and never build that attribution from a null `summary.synthesized_by`. `summary.synthesis` is one member's view, written blind to which member said what, and not a position the council took, so the member's name belongs in the line that reports it.
 - Where there is no assessment, report the reason the output gives and no more. A `summary.synthesized_by` that is set means a member was asked and wrote nothing usable, and `summary.synthesis_error` names that member and says why. A null means no member was asked, and the output does not say why: the caller switched the assessment off, or no member answered, or there was nothing to assess. An empty `providers_responded` settles the second of those. Otherwise report that no assessment was requested, and attribute it to the caller switching it off only where this invocation passed `--no-synthesis` or the config sets `synthesis` to false, which the caller knows and the output does not.
 - Report the counts from `summary` as the council computed them. They describe the groupings the tool produced, before any grouping done by hand, so a report that groups issues by hand may show fewer issues than `total_issues` counts. Say that the grouping was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-grouped set as the council's own result.
