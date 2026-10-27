@@ -528,6 +528,7 @@ Issues raised by a single provider. May be valid specialized insights.
 - Keep the summary concise — users want to know what to fix.
 - If `failed_providers` is non-empty, note which providers failed and why.
 - Report the answering roster, not only the roster asked. `consensus_issues` and `majority_issues` are computed over `providers_responded`, so agreement across two of three providers asked is consensus among the two that answered, and saying "3 providers" there overstates it.
+- Report a failure beside the consensus count, not only at the end. `providers_responded` is the exact complement of `failed_providers` within `providers_used`, and the groupings are computed over it, so a failure does not only shrink the report. It raises the share of the answering members that any one concern represents, and a concern the failed member did not share can land in `consensus_issues` where a full roster would have left it a majority one. Give the reader the answering count next to the agreement, so the agreement can be read against what measured it.
 - Do not report disagreement because `consensus_recommendation` is absent. The field fires where every provider's recommendation prose points one way and where every provider names one same approach, and neither holds when providers share a direction while recommending different approaches within it, which is a common outcome among providers who agree. Read the approaches, say whether they point the same way, and say that the reading is yours rather than the council's.
 - Do not group the approaches again. The council merges them by name, so each entry already carries the pros and cons of every provider that named it, and the number of entries is the number of approaches the council weighed. Two entries can still describe one idea under different names, because the merge matches names rather than meanings. Saying so is worth reporting, but report it as a reading of the entries and leave the entries and the counts as the council produced them.
 - Report `recommended_by` as the council derived it, including zero. Zero means the approach was raised and discussed and then recommended by nobody, which is a finding rather than missing data, so report it instead of omitting the line. Where every approach carries zero, no provider's recommendation named an approach the council could match to one it had raised, and saying that is more use to a reader than silence.
@@ -807,6 +808,15 @@ Error: Otari API base 'https://api.otari.ai/v1' from OTARI_API_BASE ends in an A
 - Increase timeout via `--timeout 120` or in config `timeout_seconds`.
 - Check network connectivity to the provider.
 
+**A member answered outside a closed set:**
+```json
+{"provider": "openai", "model": "openai:gpt-5.2", "error": "Field severity in an issue in openai response must be one of high, medium, low, got 'showstopper'", "raw_content": "..."}
+```
+- Nothing in the setup is wrong, so there is no configuration fix. The member answered and the reply was rejected where it was parsed, which puts the member in `failed_providers` rather than `providers_responded`.
+- Re-running can succeed, because the member may answer inside the set next time.
+- Read `raw_content` to see what it sent. Where one member fails this way on every run, drop it from the roster with `--provider` rather than paying for a call whose vote is discarded each time.
+- Check the consensus counts before reporting them. The failed member's absence can promote a majority concern to a consensus one.
+
 **Star-chamber not found:**
 ```
 error: No executables are provided by package `star-chamber`
@@ -828,6 +838,10 @@ error: No executables are provided by package `star-chamber`
 ### Partial Failures
 
 When some providers succeed and others fail, the JSON output includes `failed_providers` alongside successful results. The review continues with available providers. Check `failed_providers` for details.
+
+`providers_responded` is the exact complement of `failed_providers` within `providers_used`, and the groupings are computed over the members that answered. A failure therefore does not only shrink the report. It raises the share of the answering members that any one concern represents, which can turn a majority concern into a consensus one.
+
+A member can also fail for answering outside a closed set. That is a reply that arrived and was rejected where it was parsed, not a call that never completed, so a member is reported as failed although it answered. Its `error` names the field and the values the field permits, and its `raw_content` holds what it sent.
 
 ### Checking Provider Status
 
