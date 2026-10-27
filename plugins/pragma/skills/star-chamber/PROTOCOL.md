@@ -400,6 +400,7 @@ The council asks one member to write the session assessment after the rounds fin
 ### JSON Output Structure
 
 **Code review** (`mode: "code-review"`) output fields:
+- `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over.
 - `consensus_issues` — issues every provider that answered agreed on (address first).
@@ -407,19 +408,34 @@ The council asks one member to write the session assessment after the rounds fin
 - `individual_issues` — issues from single providers, keyed by provider name.
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
 - `reviews` — full individual provider reviews with `raw_content`.
-- `failed_providers` — providers that errored (with error messages).
-- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, and `consensus_count` and `majority_count` count the first two of them. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable.
+- `failed_providers` — the members that produced nothing usable, each carrying `provider`, `model`, `error` and `raw_content`. `model` names the model that was asked, which the display name does not give where several members share one provider. `raw_content` holds the reply whole, and distinguishes two cases a reader needs apart: it is null where no reply arrived at all, such as a timeout, which points at the network or the gateway, and empty where a reply arrived carrying no content, which points at the model or the prompt.
+- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, and `consensus_count` and `majority_count` count the first two of them. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable. `synthesized_by` and `synthesis_error` are always present, so a null reports an absence and is told apart from a key the output never wrote. Three rules stop a summary contradicting itself. A recorded error requires a named author. An assessment requires a named author and no recorded error. An author named beside an empty assessment requires a recorded error, which is what tells a member that was asked and wrote nothing from one that was never asked. An author is never an empty name.
 
 **Design question** (`mode: "design-question"`) output fields:
+- `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator for `consensus_recommendation`.
 - `prompt` — the original question.
-- `approaches` — every approach any provider named, merged by name across providers, with `name`, `pros`, `cons`, `risk_level`, `fit_rating` and a `recommended_by` count. One entry is one approach the council weighed: the names are matched ignoring case, punctuation and spacing, the pros and cons are the union of what every provider naming it said, and `risk_level` and `fit_rating` take the value the most providers stated, resolving a tie toward the more cautious one. `recommended_by` counts the providers whose own recommendation names that approach.
+- `approaches` — every approach any provider named, merged by name across providers, with `name`, `pros`, `cons`, `risk_level`, `fit_rating` and a `recommended_by` count. One entry is one approach the council weighed: the names are matched ignoring case, punctuation and spacing, the pros and cons are the union of what every provider naming it said, and `risk_level` and `fit_rating` take the value the most providers stated, resolving a tie toward the more cautious one. `recommended_by` counts the providers whose own recommendation names that approach. `risk_level` reads `unknown` where no member rated the approach, and `fit_rating` is null where none assessed fit. The council places both and a member may not send either, so read them as the council's own and never attribute them to a member.
 - `consensus_recommendation` — the one direction every provider that answered recommended, where the council could identify one. It fires on recommendation prose every provider shares and on a single approach every provider names. Absence still does not mean they disagreed: providers who agree on a direction while recommending different approaches within it yield nothing here.
-- `failed_providers` — providers that errored.
+- `failed_providers` — the members that produced nothing usable, carrying the same fields, and the same null against empty distinction, as above.
 - `summary` — an object, not prose, carrying `synthesis`, `synthesized_by` and `synthesis_error` with the meanings above. The count fields are code-review only and are absent here.
 
 Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema list`.
+
+**Read `spec_version` before reading the fields.** These descriptions were written against spec version 0.9. Where a document reports a higher one, present it and say that this field-level reading of it is unverified, rather than guessing at a field. Do not select behavior per field for a version above 0.9, because only versions up to it are a set this protocol documents. An absent value means the document predates 0.7.
+
+**Five fields carry a value from a fixed set.** A member that answers outside its field's set is failed where its reply is parsed, so the value never reaches the output. That member is reported in `failed_providers`, and its `error` names the field and the values the field permits.
+
+| Field | Where it sits | Values a member may send |
+|---|---|---|
+| `category` | an issue | `architecture`, `correctness`, `craftsmanship`, `invariants`, `maintainability` |
+| `fit_rating` | an approach | `poor`, `fair`, `good`, `excellent` |
+| `quality_rating` | a review | `needs-work`, `fair`, `good`, `excellent` |
+| `risk_level` | an approach | `high`, `medium`, `low` |
+| `severity` | an issue | `high`, `medium`, `low` |
+
+`risk_level` and `severity` are listed most severe first, and `fit_rating` and `quality_rating` worst first, which is the declaration order of each set. Two things follow from that order: issues sort by severity in it, and where members disagree on one approach's risk or fit, a tie resolves toward the first value listed, which is the most cautious one. `category` is unranked and listed A-Z.
 
 ### Clean Up
 
