@@ -466,25 +466,29 @@ Nothing is hidden by that. Every account is in the group's `findings`, and more 
 **Providers asked:** {providers_used from JSON}
 **Providers answered:** {providers_responded from JSON}
 
-### Consensus Issues (Every Provider That Answered Agrees)
+### Consensus Issues (Every Provider That Answered Cited)
 
-These issues were flagged by every council member. Address these first.
+Every council member that answered cited these places. Address these first.
 
-1. `{location}` **[{severity}]** ({category}) - {description}
-   - **Suggestion:** {suggestion}
+1. `{group.location}` **[{group.severity}]** ({group.categories, comma separated}) — cited by {group.flagged_by}
+   - **{finding.provider}:** {finding.description}
+     - **Suggestion:** {finding.suggestion}
+   - one bullet per entry in {group.findings}, in the order they appear
 
 ### Majority Issues ({N}/{M} Providers)
 
-These issues were flagged by most council members.
+Most council members that answered cited these places.
 
-1. `{location}` **[{severity}]** ({category}) — flagged by {flagged_by} - {description}
-   - **Suggestion:** {suggestion}
+1. `{group.location}` **[{group.severity}]** ({group.categories, comma separated}) — cited by {group.flagged_by}
+   - **{finding.provider}:** {finding.description}
+     - **Suggestion:** {finding.suggestion}
+   - one bullet per entry in {group.findings}, in the order they appear
 
 ### Individual Observations
 
-Issues raised by a single provider. May be valid specialized insights.
+Places one provider cited. May be valid specialized insights.
 
-- **{Provider}:** `{location}` - {description}
+- **{provider}:** `{group.location}` **[{group.severity}]** — {finding.description}, one bullet per entry in {group.findings}
 
 ### Summary
 
@@ -538,7 +542,8 @@ Issues raised by a single provider. May be valid specialized insights.
 - Do not print the council's own placeholder as though a member chose it. `risk_level` reads `unknown`, and `fit_rating` is null, where no member rated or assessed that approach, and a member may send neither value. Write that no member rated it. An `unknown` printed as a risk level reads as a member judging the risk unknowable, which is a different claim from nobody having judged it, and a null printed as a fit reads as a defect in the report.
 - Attribute the overall assessment to the member that wrote it, and never build that attribution from a null `summary.synthesized_by`. `summary.synthesis` is one member's view, written blind to which member said what, and not a position the council took, so the member's name belongs in the line that reports it.
 - Where there is no assessment, report the reason the output gives and no more. A `summary.synthesized_by` that is set means a member was asked and wrote nothing usable, and `summary.synthesis_error` names that member and says why. A null means no member was asked, and the output does not say why: the caller switched the assessment off, or no member answered, or there was nothing to assess. An empty `providers_responded` settles the second of those. Otherwise report that no assessment was requested, and attribute it to the caller switching it off only where this invocation passed `--no-synthesis` or the config sets `synthesis` to false, which the caller knows and the output does not.
-- Report the counts from `summary` as the council computed them. They describe the groupings the tool produced, before any grouping done by hand, so a report that groups issues by hand may show fewer issues than `total_issues` counts. Say that the grouping was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-grouped set as the council's own result.
+- Report the counts from `summary` as the council computed them. They count the groups the tool produced, before any split done by hand, so a report that splits a group holding different defects shows more issues than `total_issues` counts. Say that the split was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-split set as the council's own result.
+- Do not attribute a group's own fields to a member. `location`, `severity` and `categories` are derived from the findings and belong to the group. The location is the citation that opened it, so a finding beside it may cite a different place; the severity is the most urgent any member gave, so it can exceed what the member shown beside it said; and `categories` may hold several, which is the members disagreeing rather than one member naming several. Report them as the group's, and take a member's own severity, location and category from that member's finding.
 
 ## Debate Mode
 
