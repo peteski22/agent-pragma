@@ -404,13 +404,15 @@ The council asks one member to write the session assessment after the rounds fin
 - `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over.
-- `consensus_issues` — issues every provider that answered cited at one place under one category (address first). Agreement on the place is not agreement on the defect, as the note on overstating below explains.
-- `majority_issues` — issues flagged by more than one provider that answered, but not all of them (includes `flagged_by` list).
-- `individual_issues` — issues from single providers, keyed by provider name.
+- `consensus_issues` — the places every provider that answered cited (address first).
+- `majority_issues` — the places more than one provider that answered cited, but not all of them.
+- `individual_issues` — the places one provider cited, keyed by provider name, the keys A-Z.
+
+**All three hold groups, not issues.** A group is one place the council cited, and it carries a `findings` entry for every account a member gave of that place. A `finding` has the `provider` that raised it and that member's own `severity`, `location`, `category`, `description` and `suggestion`. The group's own `location`, `severity`, `categories` and `flagged_by` are derived from its findings and belong to the group, not to any member: `location` is the citation that opened the group and a finding may cite a narrower or wider place, `severity` is the most urgent any finding carries, and `categories` is every category its findings carry, A-Z and without repeats. Read `findings` for what the members said. There is no `description` on a group to read instead.
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
 - `reviews` — full individual provider reviews with `raw_content`.
 - `failed_providers` — the members that produced nothing usable, each carrying `provider`, `model`, `error` and `raw_content`. `model` names the model that was asked, which the display name does not give where several members share one provider. `raw_content` holds the reply whole, and distinguishes two cases a reader needs apart: it is null where no reply arrived at all, such as a timeout, which points at the network or the gateway, and empty where a reply arrived carrying no content, which points at the model or the prompt.
-- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, and `consensus_count` and `majority_count` count the first two of them. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable. `synthesized_by` and `synthesis_error` are always present, so a null reports an absence and is told apart from a key the output never wrote. Three rules stop a summary contradicting itself. A recorded error requires a named author. An assessment requires a named author and no recorded error. An author named beside an empty assessment requires a recorded error, which is what tells a member that was asked and wrote nothing from one that was never asked. An author is never an empty name.
+- `summary` — an object, not prose. `total_issues` counts the groups across the three buckets above, and `consensus_count` and `majority_count` count the first two of them. All three count groups rather than findings, so a group several members described counts once. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable. `synthesized_by` and `synthesis_error` are always present, so a null reports an absence and is told apart from a key the output never wrote. Three rules stop a summary contradicting itself. A recorded error requires a named author. An assessment requires a named author and no recorded error. An author named beside an empty assessment requires a recorded error, which is what tells a member that was asked and wrote nothing from one that was never asked. An author is never an empty name.
 
 **Design question** (`mode: "design-question"`) output fields:
 - `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
@@ -424,19 +426,19 @@ The council asks one member to write the session assessment after the rounds fin
 
 Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema list`.
 
-**Read `spec_version` before reading the fields.** These descriptions were written against spec version 0.9. Where a document reports a higher one, present it and say that this field-level reading of it is unverified, rather than guessing at a field. Do not select behavior per field for a version above 0.9, because only versions up to it are a set this protocol documents. An absent value means the document predates 0.7.
+**Read `spec_version` before reading the fields.** These descriptions were written against spec version 0.11. Where a document reports a higher one, present it and say that this field-level reading of it is unverified, rather than guessing at a field. Do not select behavior per field for a version above 0.11, because only versions up to it are a set this protocol documents. A document reporting 0.9 or lower predates the floor above.
 
 **Five fields carry a value from a fixed set.** A member that answers outside its field's set is failed where its reply is parsed, so the value never reaches the output. That member is reported in `failed_providers`, and its `error` names the field and the values the field permits.
 
 | Field | Where it sits | Values a member may send |
 |---|---|---|
-| `category` | an issue | `architecture`, `correctness`, `craftsmanship`, `invariants`, `maintainability` |
+| `category` | an issue a member sends, and the finding made from it | `architecture`, `correctness`, `craftsmanship`, `invariants`, `maintainability` |
 | `fit_rating` | an approach | `poor`, `fair`, `good`, `excellent` |
 | `quality_rating` | a review | `needs-work`, `fair`, `good`, `excellent` |
 | `risk_level` | an approach | `high`, `medium`, `low` |
-| `severity` | an issue | `high`, `medium`, `low` |
+| `severity` | an issue a member sends, and the finding made from it | `high`, `medium`, `low` |
 
-`risk_level` and `severity` are listed most severe first, and `fit_rating` and `quality_rating` worst first, which is the declaration order of each set. Two things follow from that order: issues sort by severity in it, and where members disagree on one approach's risk or fit, a tie resolves toward the first value listed, which is the most cautious one. `category` is unranked and listed A-Z.
+`risk_level` and `severity` are listed most severe first, and `fit_rating` and `quality_rating` worst first, which is the declaration order of each set. Two things follow from that order: groups sort by severity in it, and where members disagree on one approach's risk or fit, a tie resolves toward the first value listed, which is the most cautious one. `category` is unranked and listed A-Z.
 
 ### Clean Up
 
@@ -449,13 +451,9 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 
 Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the Markdown formats below are for human consumption.
 
-**Consensus can still understate agreement.** The council groups two issues when they name the same file and the same category, and their cited line spans overlap or sit within five lines of each other. A citation that names no line, and one whose range covers more than fifty lines, both cite the file rather than a place within it, and a file-level citation never groups with a specific line. Two members can also file one defect under different categories. In either case a defect every member raised lands in `individual_issues`, with the consensus list empty or holding something else.
+**A group is one place, not one defect.** The council groups two citations when they name the same file and their line spans overlap or sit within five lines of each other. A citation naming no line groups with the lines in that file. What a member said takes no part, so two members describing different defects at one place are grouped, and `consensus_count` counts that group once. A count of one can therefore stand for two unrelated defects both members happened to cite at one line.
 
-Where the individual issues hold what is plainly one defect, cited in differing forms, group them by hand. Say in the report that the grouping was done by hand, and do not present a hand-grouped set as consensus the tool reported.
-
-**Consensus can also overstate agreement, and the groupings do not show it.** The grouping key is the file, the line span and the category. It does not include what a member said. Two members describing different defects at one line under one category therefore group, and the group keeps one member's description and discards the rest. The discarded description is absent from `consensus_issues`, `majority_issues` and `individual_issues` alike, and neither the groupings nor `summary` records that a description was dropped. A consensus entry is evidence that several members cited one place under one category. It is not evidence that they described one defect.
-
-The dropped text is still in the document. Before relying on a consensus entry where being wrong is costly, compare `reviews[].issues` for the members that contributed it, which carries every member's own description as a structured field and needs no reparsing of `raw_content`. Where the members described different defects, report them separately and say the entry was split by hand.
+Nothing is hidden by that. Every account is in the group's `findings`, and more than one entry in `categories` says the members read the place as different kinds of concern. Read the findings before describing a group as one defect the council agreed on, and where they describe different defects, report them separately and say the group was split by hand.
 
 ### Code Review Format
 
