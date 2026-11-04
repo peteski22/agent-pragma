@@ -477,9 +477,9 @@ Every council member that answered cited these places. Address these first.
      - **Suggestion:** {finding.suggestion}
    - one bullet per entry in {group.findings}, in the order they appear
 
-### Majority Issues ({N}/{M} Providers)
+### Majority Issues (More Than One Provider, Not All)
 
-Most council members that answered cited these places.
+More than one council member that answered cited these places, but not all of them. The bucket takes a group at two members, which is not a majority of a larger roster, so give each group's own count and do not report the bucket as the view of most of the council.
 
 1. `{group.location}` **[{group.severity}]** ({group.categories, comma separated}) — cited by {group.flagged_by}
    - **{finding.provider}:** {finding.description}
