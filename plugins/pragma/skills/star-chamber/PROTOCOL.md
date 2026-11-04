@@ -41,16 +41,16 @@
 **CLI invocation:** Star-chamber is a PyPI package with a CLI entry point. Use `uvx` to run it in an isolated environment:
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber <command> [options] [arguments]
 ```
 
 `uvx` installs `star-chamber` from PyPI (cached after first run) and executes in isolation — no interference with the host project's environment.
 
-**Version:** This protocol targets star-chamber **0.10.0 or later**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
+**Version:** This protocol targets star-chamber **0.11.0 or later**, whose config routes gateway traffic through a top-level `otari` object. A pre-0.2 `"platform": "any-llm"` config is rejected by the loader; regenerate it (see Step 0) if you hit that error.
 
-The package version and the protocol version it reports are different numbers. 0.10.0 reports a `spec_version` of 0.9, because the spec is versioned separately and its 0.7 and 0.8 revisions were merged without ever shipping in a release. Do not read the two numbers disagreeing as a failed install.
+The package version and the protocol version it reports are different numbers that happen to read alike here. 0.11.0 reports a `spec_version` of 0.11, while 0.10.0 reported 0.9, because the spec is versioned separately and its 0.7, 0.8 and 0.10 revisions were merged without ever shipping in a release. Read the reported value rather than inferring it from the package version.
 
-0.10.0 is the floor for seven reasons. The first two fail late rather than at install time, the next four do not fail at all, and the last changes what the council reports about its own members. 0.9.0 is not one of them, because it only opens the published schema so that a consumer validating against an older copy of it is not rejected on a field that copy predates, and this protocol never validates output against a schema. The reasons, in order:
+0.11.0 is the floor for eight reasons. The first two fail late rather than at install time, the next four do not fail at all, and the last two change what the council reports. 0.9.0 is not one of them, because it only opens the published schema so that a consumer validating against an older copy of it is not rejected on a field that copy predates, and this protocol never validates output against a schema. The reasons, in order:
 
 - 0.4.2 is the first release to declare the `otari` extra used below. Asking an earlier 0.4.x for that extra is not an error — uv warns on stderr, installs nothing, and exits 0 — so the council starts and then fails at its first provider call.
 - 0.4.3 is the first release whose extra requires an Otari client that speaks the `/api/v1` API root. The hosted otari.ai gateway and self-hosted Otari 0.6.0 or later serve only that root, so an older client, which calls `/v1`, fails every gateway call as not found. The reverse also holds: a self-hosted gateway older than 0.6.0 serves only `/v1`, so this protocol needs that gateway upgraded first.
@@ -59,23 +59,24 @@ The package version and the protocol version it reports are different numbers. 0
 - 0.7.0 is the first release to merge design approaches and the first to derive `recommended_by`. An earlier release concatenates each member's own approaches, so one approach that three members named arrives as three entries with its pros and cons split across them, and the per-member reply has no field for the count, so every approach reports a count of zero. `consensus_recommendation` there also requires byte-identical recommendation prose, so it almost never fires. A report built from an earlier release has to merge the approaches itself and cannot report the counts at all.
 - 0.8.0 is the first release whose `summary.synthesis` is a synthesis. An earlier release joins each answering member's own summary, so the one field that claims to read across the council carries no reading, and a single-member session hides the defect because one member's summary passes for an assessment. 0.8.0 also names the member asked in `summary.synthesized_by` and records a failed attempt in `summary.synthesis_error`, so a report can say whose assessment it is instead of presenting one member's judgment as the council's.
 - 0.10.0 is the first release to refuse a member's value outside a closed set, and the first to require the fields that explain a failure. Five fields name a closed set, and an earlier release copies an unrecognized value straight through, so a member answering in its own vocabulary is reported as a success while the document it produces fails validation against the schema the same package ships. Refusing that member instead costs it its vote, which lowers `providers_responded` and can promote a concern it did not share from a majority one to a consensus one. 0.10.0 also requires `model` and `raw_content` on a failure, so a report can name the model asked where several members share one provider and quote the reply rather than guess at it, and it requires `synthesis_error` and `synthesized_by` on the summary, so an assessment that is absent is told apart from one the output does not record.
+- 0.11.0 is the first release to group issues on the place alone and to keep every member's account of a group, and the first whose `consensus_recommendation` reports a majority. An earlier release groups on the category as well as the place, so one defect three members read as `correctness`, `invariants` and `architecture` is reported as three unrelated single-member findings. It also keeps one member's account per group and discards the rest, so two members describing different defects at one place are reported as one agreed finding carrying one description. An earlier `consensus_recommendation` requires every answering member to name exactly one approach and all of them to name the same one, so it is null in nearly every real session while the per-approach counts beside it show clear agreement. A report built from an earlier release understates agreement, overstates it, and reads an empty recommendation as disagreement.
 
-Every command below therefore requests `star-chamber[otari]>=0.10.0` rather than the bare extra. The constraint is what makes the floor binding: an unconstrained request can be served from a cached older environment that lacks the extra or holds an outdated client, and it reports nothing when it is. With the constraint, an environment that cannot satisfy the floor fails as an unsatisfiable-requirements error instead of producing a council that dies at its first provider call, one that reports more agreement than it found, one whose report is missing its summary, or one that passes off a member's unrecognized rating as a success.
+Every command below therefore requests `star-chamber[otari]>=0.11.0` rather than the bare extra. The constraint is what makes the floor binding: an unconstrained request can be served from a cached older environment that lacks the extra or holds an outdated client, and it reports nothing when it is. With the constraint, an environment that cannot satisfy the floor fails as an unsatisfiable-requirements error instead of producing a council that dies at its first provider call, one that reports more agreement than it found, one whose report is missing its summary, or one that passes off a member's unrecognized rating as a success.
 
 **The Otari gateway client is part of the invocation, not an optional addition.** In **Otari** mode every non-local provider is dispatched through the OpenAI-compatible Otari gateway. The gateway client is absent from the base install, so without the `otari` extra the first gateway call fails, reporting that the Otari packages are not installed. The failure lands at call time, not install time, so a command that resolves cleanly can still fail on use.
 
-**Every star-chamber invocation in this protocol already requests the extra. Copy the commands as written and do not strip it.** The extra is harmless outside Otari mode — it installs a gateway client that goes unused — so it is safe to leave in place whatever the configured mode is. Do not retype an invocation from memory: an invocation that drops `--from 'star-chamber[otari]>=0.10.0'` resolves and runs, then fails at the first provider call.
+**Every star-chamber invocation in this protocol already requests the extra. Copy the commands as written and do not strip it.** The extra is harmless outside Otari mode — it installs a gateway client that goes unused — so it is safe to leave in place whatever the configured mode is. Do not retype an invocation from memory: an invocation that drops `--from 'star-chamber[otari]>=0.11.0'` resolves and runs, then fails at the first provider call.
 
 **Provider SDKs are not all included by default.** Only the OpenAI SDK is a base dependency of `any-llm-sdk`. In **direct** mode, each non-OpenAI provider (Anthropic, Gemini, Cohere, etc.) needs its own SDK added as a further `--with` flag:
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.10.0' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[otari]>=0.11.0' --with anthropic --with google-genai star-chamber <command> [options] [arguments]
 ```
 
 In Otari mode those *per-provider* SDK flags are not needed, because the gateway holds the upstream credentials:
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber <command> [options] [arguments]
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber <command> [options] [arguments]
 ```
 
 ## Step 0: Check Prerequisites
@@ -90,10 +91,10 @@ CONFIG_PATH="${STAR_CHAMBER_CONFIG:-$HOME/.config/star-chamber/providers.json}"
 
 **Verify star-chamber is accessible:**
 ```bash
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber list-providers
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber list-providers
 ```
 
-If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall --from 'star-chamber[otari]>=0.10.0' star-chamber list-providers` to refresh the cached environment.
+If this fails with a package resolution error or missing module import, star-chamber may not be published or uv's cache may be stale. Try `uvx --reinstall --from 'star-chamber[otari]>=0.11.0' star-chamber list-providers` to refresh the cached environment.
 
 **If `list-providers` fails because the Otari API base "ends in an API path"**, the base URL still carries an API path such as `/v1` from an older setup. The error names the setting that supplied the base and the corrected value. Show the error to the user and offer to apply the fix. Change nothing until the user agrees.
 
@@ -381,12 +382,12 @@ The SDK handles prompt construction, fan-out to all configured providers, respon
 
 **Code review:**
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.10.0' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
+SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.11.0' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] file1.py file2.py
 ```
 
 **Design question:**
 ```bash
-SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.10.0' star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
+SC_TMPDIR="<literal path from mktemp output>"; uvx --from 'star-chamber[otari]>=0.11.0' star-chamber ask --context-file "$SC_TMPDIR/context.txt" --format json [--provider <name>...] [--timeout <seconds>] "Should we use Redis or Memcached?"
 ```
 
 The council asks one member to write the session assessment after the rounds finish, so a session makes one provider call more than it has members, and a session where two calls time out is the worst case rather than one. `--no-synthesis` on either command skips it and spends no extra call, leaving `summary.synthesis` empty, and the config key `"synthesis"` sets the default.
@@ -400,42 +401,44 @@ The council asks one member to write the session assessment after the rounds fin
 ### JSON Output Structure
 
 **Code review** (`mode: "code-review"`) output fields:
-- `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
+- `spec_version` — the protocol version that produced the document, which is not the package version: 0.11.0 reports 0.11.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over.
-- `consensus_issues` — issues every provider that answered cited at one place under one category (address first). Agreement on the place is not agreement on the defect, as the note on overstating below explains.
-- `majority_issues` — issues flagged by more than one provider that answered, but not all of them (includes `flagged_by` list).
-- `individual_issues` — issues from single providers, keyed by provider name.
+- `consensus_issues` — the places every provider that answered cited (address first).
+- `majority_issues` — the places more than one provider that answered cited, but not all of them.
+- `individual_issues` — the places one provider cited, keyed by provider name, the keys A-Z.
+
+**All three hold groups, not issues.** A group is one place the council cited, and it carries a `findings` entry for every account a member gave of that place. A `finding` has the `provider` that raised it and that member's own `severity`, `location`, `category`, `description` and `suggestion`. The group's own `location`, `severity`, `categories` and `flagged_by` are derived from its findings and belong to the group, not to any member: `location` is the citation that opened the group and a finding may cite a narrower or wider place, `severity` is the most urgent any finding carries, and `categories` is every category its findings carry, A-Z and without repeats. Read `findings` for what the members said. There is no `description` on a group to read instead.
 - `quality_ratings` — per-provider quality assessment (keyed by provider name).
 - `reviews` — full individual provider reviews with `raw_content`.
 - `failed_providers` — the members that produced nothing usable, each carrying `provider`, `model`, `error` and `raw_content`. `model` names the model that was asked, which the display name does not give where several members share one provider. `raw_content` holds the reply whole, and distinguishes two cases a reader needs apart: it is null where no reply arrived at all, such as a timeout, which points at the network or the gateway, and empty where a reply arrived carrying no content, which points at the model or the prompt.
-- `summary` — an object, not prose. `total_issues` counts the distinct issues across the three groupings above, and `consensus_count` and `majority_count` count the first two of them. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable. `synthesized_by` and `synthesis_error` are always present, so a null reports an absence and is told apart from a key the output never wrote. Three rules stop a summary contradicting itself. A recorded error requires a named author. An assessment requires a named author and no recorded error. An author named beside an empty assessment requires a recorded error, which is what tells a member that was asked and wrote nothing from one that was never asked. An author is never an empty name.
+- `summary` — an object, not prose. `total_issues` counts the groups across the three buckets above, and `consensus_count` and `majority_count` count the first two of them. All three count groups rather than findings, so a group several members described counts once. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable. `synthesized_by` and `synthesis_error` are always present, so a null reports an absence and is told apart from a key the output never wrote. Three rules stop a summary contradicting itself. A recorded error requires a named author. An assessment requires a named author and no recorded error. An author named beside an empty assessment requires a recorded error, which is what tells a member that was asked and wrote nothing from one that was never asked. An author is never an empty name.
 
 **Design question** (`mode: "design-question"`) output fields:
-- `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
+- `spec_version` — the protocol version that produced the document, which is not the package version: 0.11.0 reports 0.11.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator for `consensus_recommendation`.
 - `prompt` — the original question.
-- `approaches` — every approach any provider named, merged by name across providers, with `name`, `pros`, `cons`, `risk_level`, `fit_rating` and a `recommended_by` count. One entry is one approach the council weighed: the names are matched ignoring case, punctuation and spacing, the pros and cons are the union of what every provider naming it said, and `risk_level` and `fit_rating` take the value the most providers stated, resolving a tie toward the more cautious one. `recommended_by` counts the providers whose own recommendation names that approach. `risk_level` reads `unknown` where no member rated the approach, and `fit_rating` is null where none assessed fit. The council places both and a member may not send either, so read them as the council's own and never attribute them to a member.
-- `consensus_recommendation` — the one direction every provider that answered recommended, where the council could identify one. It fires on recommendation prose every provider shares and on a single approach every provider names. Absence still does not mean they disagreed: providers who agree on a direction while recommending different approaches within it yield nothing here.
+- `approaches` — every approach any provider named, merged by name across providers, with `name`, `pros`, `cons`, `risk_level`, `fit_rating` and a `recommended_by` count. One entry is one approach the council weighed: the names are matched ignoring case, punctuation and spacing, the pros and cons are the union of what every provider naming it said, and `risk_level` and `fit_rating` take the value the most providers stated, resolving a tie toward the more cautious one. `recommended_by` counts the providers whose own recommendation names that approach, which counts mentions rather than endorsements, so an approach every member named in order to reject it carries their count. `risk_level` reads `unknown` where no member rated the approach, and `fit_rating` is null where none assessed fit. The council places both and a member may not send either, so read them as the council's own and never attribute them to a member.
+- `consensus_recommendation` — the name of the approach a strict majority of the providers that answered named in their own recommendation, or null where no approach held one. The value is always a name that appears in `approaches`, so look it up there rather than reading it as prose. **It tallies names, not endorsements.** The council matches the approach names against the words of a member's recommendation and reads no polarity from them, so a recommendation that names one approach in order to reject it casts a ballot for it: two members that both write "avoid Redis" make Redis the consensus recommendation. A member casts a ballot only where its recommendation names exactly one approach and that member named the approach itself, because a recommendation naming two does not say which it meant. The configured threshold can raise the bar toward unanimity but never lower it below a majority. Absence still does not mean they disagreed: members expressing one direction in different words are tallied separately, so each wording must hold the majority on its own.
 - `failed_providers` — the members that produced nothing usable, carrying the same fields, and the same null against empty distinction, as above.
 - `summary` — an object, not prose, carrying `synthesis`, `synthesized_by` and `synthesis_error` with the meanings above. The count fields are code-review only and are absent here.
 
-Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema list`.
+Both modes return the same object, so the schema for the fields above is `council-output`: `uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema council-output`. The `code-review-result` and `design-advice-result` schemas describe one provider's own reply, which is what each entry of `reviews` holds, not the aggregated output. List all schemas with `uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema list`.
 
-**Read `spec_version` before reading the fields.** These descriptions were written against spec version 0.9. Where a document reports a higher one, present it and say that this field-level reading of it is unverified, rather than guessing at a field. Do not select behavior per field for a version above 0.9, because only versions up to it are a set this protocol documents. An absent value means the document predates 0.7.
+**Read `spec_version` before reading the fields.** These descriptions were written against spec version 0.11. Where a document reports a higher one, present it and say that this field-level reading of it is unverified, rather than guessing at a field. Do not select behavior per field for a version above 0.11, because only versions up to it are a set this protocol documents. A document reporting 0.9 or lower predates the floor above.
 
 **Five fields carry a value from a fixed set.** A member that answers outside its field's set is failed where its reply is parsed, so the value never reaches the output. That member is reported in `failed_providers`, and its `error` names the field and the values the field permits.
 
 | Field | Where it sits | Values a member may send |
 |---|---|---|
-| `category` | an issue | `architecture`, `correctness`, `craftsmanship`, `invariants`, `maintainability` |
+| `category` | an issue a member sends, and the finding made from it | `architecture`, `correctness`, `craftsmanship`, `invariants`, `maintainability` |
 | `fit_rating` | an approach | `poor`, `fair`, `good`, `excellent` |
 | `quality_rating` | a review | `needs-work`, `fair`, `good`, `excellent` |
 | `risk_level` | an approach | `high`, `medium`, `low` |
-| `severity` | an issue | `high`, `medium`, `low` |
+| `severity` | an issue a member sends, and the finding made from it | `high`, `medium`, `low` |
 
-`risk_level` and `severity` are listed most severe first, and `fit_rating` and `quality_rating` worst first, which is the declaration order of each set. Two things follow from that order: issues sort by severity in it, and where members disagree on one approach's risk or fit, a tie resolves toward the first value listed, which is the most cautious one. `category` is unranked and listed A-Z.
+`risk_level` and `severity` are listed most severe first, and `fit_rating` and `quality_rating` worst first, which is the declaration order of each set. Two things follow from that order: groups sort by severity in it, and where members disagree on one approach's risk or fit, a tie resolves toward the first value listed, which is the most cautious one. `category` is unranked and listed A-Z.
 
 ### Clean Up
 
@@ -448,13 +451,11 @@ SC_TMPDIR="<literal path from mktemp output>"; rm -rf "$SC_TMPDIR"
 
 Parse the JSON output from Step 3 and present using the appropriate format below. In **non-debate mode**, the JSON is returned directly by the Bash tool response — parse it in-context. In **debate mode**, use the **Read tool** with the literal temp file path to read the final round's JSON (e.g., reading `/tmp/star-chamber/run-KdkPeA/round-2.json`). Do NOT use `python3 -c`, `cat`, or other shell commands to read result files. Do NOT include raw JSON in the terminal summary — the Markdown formats below are for human consumption.
 
-**Consensus can still understate agreement.** The council groups two issues when they name the same file and the same category, and their cited line spans overlap or sit within five lines of each other. A citation that names no line, and one whose range covers more than fifty lines, both cite the file rather than a place within it, and a file-level citation never groups with a specific line. Two members can also file one defect under different categories. In either case a defect every member raised lands in `individual_issues`, with the consensus list empty or holding something else.
+**A group is one place, not one defect.** The council groups two citations when they name the same file and their line spans overlap or sit within five lines of each other. What a member said takes no part, so two members describing different defects at one place are grouped, and `consensus_count` counts that group once. A count of one can therefore stand for two unrelated defects both members happened to cite at one line.
 
-Where the individual issues hold what is plainly one defect, cited in differing forms, group them by hand. Say in the report that the grouping was done by hand, and do not present a hand-grouped set as consensus the tool reported.
+**Two kinds of citation name a file rather than a place in it.** One that carries no line does, and so does one whose span is wider than fifty lines. Such a citation joins the first group already opened in that file, whatever lines that group holds, so `file.py:1-100` groups with `file.py:500`. It joins that one group and does not reach the others in the file. A group therefore does not say the citations in it are near each other, and the group's `location` can name a line far from a finding beside it.
 
-**Consensus can also overstate agreement, and the groupings do not show it.** The grouping key is the file, the line span and the category. It does not include what a member said. Two members describing different defects at one line under one category therefore group, and the group keeps one member's description and discards the rest. The discarded description is absent from `consensus_issues`, `majority_issues` and `individual_issues` alike, and neither the groupings nor `summary` records that a description was dropped. A consensus entry is evidence that several members cited one place under one category. It is not evidence that they described one defect.
-
-The dropped text is still in the document. Before relying on a consensus entry where being wrong is costly, compare `reviews[].issues` for the members that contributed it, which carries every member's own description as a structured field and needs no reparsing of `raw_content`. Where the members described different defects, report them separately and say the entry was split by hand.
+Nothing is hidden by the grouping. Every account is in the group's `findings`, and `categories` lists every category those findings carry. More than one category is not evidence that the members disagreed, because one member that cites the place twice contributes two findings and can name a different category in each. Read the findings before describing a group as one defect the council agreed on, and where they describe different defects, report them separately and say the group was split by hand.
 
 ### Code Review Format
 
@@ -467,25 +468,32 @@ The dropped text is still in the document. Before relying on a consensus entry w
 **Providers asked:** {providers_used from JSON}
 **Providers answered:** {providers_responded from JSON}
 
-### Consensus Issues (Every Provider That Answered Agrees)
+### Consensus Issues (Every Provider That Answered Cited)
 
-These issues were flagged by every council member. Address these first.
+Every council member that answered cited these places. Address these first.
 
-1. `{location}` **[{severity}]** ({category}) - {description}
-   - **Suggestion:** {suggestion}
+1. `{group.location}` **[{group.severity}]** ({group.categories, comma separated}) — cited by {group.flagged_by}
+   - **{finding.provider}** `{finding.location}` **[{finding.severity}]** ({finding.category}): {finding.description}
+     - **Suggestion:** {finding.suggestion}
+   - one bullet per entry in {group.findings}, in the order they appear
 
-### Majority Issues ({N}/{M} Providers)
+### Majority Issues (More Than One Provider, Not All)
 
-These issues were flagged by most council members.
+More than one council member that answered cited these places, but not all of them. The bucket takes a group at two members, which is not a majority of a larger roster, so give each group's own count and do not report the bucket as the view of most of the council.
 
-1. `{location}` **[{severity}]** ({category}) — flagged by {flagged_by} - {description}
-   - **Suggestion:** {suggestion}
+1. `{group.location}` **[{group.severity}]** ({group.categories, comma separated}) — cited by {group.flagged_by}
+   - **{finding.provider}** `{finding.location}` **[{finding.severity}]** ({finding.category}): {finding.description}
+     - **Suggestion:** {finding.suggestion}
+   - one bullet per entry in {group.findings}, in the order they appear
 
 ### Individual Observations
 
-Issues raised by a single provider. May be valid specialized insights.
+Places one provider cited. May be valid specialized insights.
 
-- **{Provider}:** `{location}` - {description}
+- **{provider}:** `{group.location}` ({group.categories, comma separated})
+  - `{finding.location}` **[{finding.severity}]** ({finding.category}): {finding.description}
+    - **Suggestion:** {finding.suggestion}
+  - one bullet per entry in {group.findings}, in the order they appear
 
 ### Summary
 
@@ -509,7 +517,7 @@ Issues raised by a single provider. May be valid specialized insights.
 
 ### Consensus Recommendation
 
-{consensus_recommendation from JSON, if present — where it is absent, state whether the approaches agree on a direction and say that this reading is yours}
+{consensus_recommendation from JSON, if present — it is an approach name, so report it as the approach a majority named and not as a direction in prose, and read that approach's `cons` before calling it the council's choice. Where it is absent, state whether the approaches agree on a direction and say that this reading is yours}
 
 ### Approaches Considered
 
@@ -533,13 +541,15 @@ Issues raised by a single provider. May be valid specialized insights.
 - If `failed_providers` is non-empty, note which providers failed and why.
 - Report the answering roster, not only the roster asked. `consensus_issues` and `majority_issues` are computed over `providers_responded`, so agreement across two of three providers asked is consensus among the two that answered, and saying "3 providers" there overstates it.
 - Report a failure beside the consensus count, not only at the end. `providers_responded` is the exact complement of `failed_providers` within `providers_used`, and the groupings are computed over it, so a failure does not only shrink the report. It raises the share of the answering members that any one concern represents, and a concern the failed member did not share can land in `consensus_issues` where a full roster would have left it a majority one. Give the reader the answering count next to the agreement, so the agreement can be read against what measured it.
-- Do not report disagreement because `consensus_recommendation` is absent. The field fires where every provider's recommendation prose points one way and where every provider names one same approach, and neither holds when providers share a direction while recommending different approaches within it, which is a common outcome among providers who agree. Read the approaches, say whether they point the same way, and say that the reading is yours rather than the council's.
+- Do not report disagreement because `consensus_recommendation` is absent. The field names an approach only where a strict majority of the answering members named that one approach in their recommendation, so it stays null where members name one direction in different words, or where a member's recommendation names two approaches and casts no ballot at all. Read the approaches and their `recommended_by` counts, say whether they point the same way, and say that the reading is yours rather than the council's.
+- Do not present `consensus_recommendation` or `recommended_by` as the council endorsing an approach. Both count the approach names a member's recommendation mentions, and neither reads whether that member argued for it or against it, so an approach every member named in order to reject it can hold the majority. The document keeps no member's recommendation text, so the reading cannot be settled from it. Report the field as the approach a majority named, weigh it against that approach's `cons`, and where the cons contradict the name say so and leave the field as the council produced it.
 - Do not group the approaches again. The council merges them by name, so each entry already carries the pros and cons of every provider that named it, and the number of entries is the number of approaches the council weighed. Two entries can still describe one idea under different names, because the merge matches names rather than meanings. Saying so is worth reporting, but report it as a reading of the entries and leave the entries and the counts as the council produced them.
 - Report `recommended_by` as the council derived it, including zero. Zero means the approach was raised and discussed and then recommended by nobody, which is a finding rather than missing data, so report it instead of omitting the line. Where every approach carries zero, no provider's recommendation named an approach the council could match to one it had raised, and saying that is more use to a reader than silence.
 - Do not print the council's own placeholder as though a member chose it. `risk_level` reads `unknown`, and `fit_rating` is null, where no member rated or assessed that approach, and a member may send neither value. Write that no member rated it. An `unknown` printed as a risk level reads as a member judging the risk unknowable, which is a different claim from nobody having judged it, and a null printed as a fit reads as a defect in the report.
 - Attribute the overall assessment to the member that wrote it, and never build that attribution from a null `summary.synthesized_by`. `summary.synthesis` is one member's view, written blind to which member said what, and not a position the council took, so the member's name belongs in the line that reports it.
 - Where there is no assessment, report the reason the output gives and no more. A `summary.synthesized_by` that is set means a member was asked and wrote nothing usable, and `summary.synthesis_error` names that member and says why. A null means no member was asked, and the output does not say why: the caller switched the assessment off, or no member answered, or there was nothing to assess. An empty `providers_responded` settles the second of those. Otherwise report that no assessment was requested, and attribute it to the caller switching it off only where this invocation passed `--no-synthesis` or the config sets `synthesis` to false, which the caller knows and the output does not.
-- Report the counts from `summary` as the council computed them. They describe the groupings the tool produced, before any grouping done by hand, so a report that groups issues by hand may show fewer issues than `total_issues` counts. Say that the grouping was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-grouped set as the council's own result.
+- Report the counts from `summary` as the council computed them. They count the groups the tool produced, before any split done by hand, so a report that splits a group holding different defects shows more issues than `total_issues` counts. Say that the split was done by hand and leave the counts alone, which keeps the two reconcilable. Adjusting them to match presents a hand-split set as the council's own result.
+- Do not attribute a group's own fields to a member. `location`, `severity` and `categories` are derived from the findings and belong to the group. The location is the citation that opened it, so a finding beside it may cite a different place. The severity is the most urgent any member gave, so it can exceed what the member shown beside it said. The categories are every category the findings carry, and several of them can come from one member that cited the place more than once, so they do not say the members disagreed. Report them as the group's, and take a member's own severity, location and category from that member's finding.
 
 ## Debate Mode
 
@@ -574,7 +584,7 @@ Then run the same rule-loading and architecture-context logic from Step 2, writi
 ### Debate Flow
 
 ```text
-Round 1: uvx --from 'star-chamber[otari]>=0.10.0' star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
+Round 1: uvx --from 'star-chamber[otari]>=0.11.0' star-chamber review --context-file $SC_TMPDIR/context.txt --format json <files> > $SC_TMPDIR/round-1.json
          ↓
          Use Read tool on round-1.json, create anonymous synthesis
          ↓
@@ -582,7 +592,7 @@ For each subsequent round (2 to N):
          ↓
     Write synthesis to $SC_TMPDIR/council-context.txt via Bash heredoc
          ↓
-    uvx --from 'star-chamber[otari]>=0.10.0' star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
+    uvx --from 'star-chamber[otari]>=0.11.0' star-chamber review --context-file $SC_TMPDIR/context.txt --council-context $SC_TMPDIR/council-context.txt --format json <files> > $SC_TMPDIR/round-N.json
          ↓
 Final: Use Read tool on last round's JSON for presentation (Step 4)
 ```
@@ -591,7 +601,7 @@ Final: Use Read tool on last round's JSON for presentation (Step 4)
 
 For each round, redirect stdout to a round file:
 ```bash
-SC_TMPDIR="<literal path>"; uvx --from 'star-chamber[otari]>=0.10.0' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
+SC_TMPDIR="<literal path>"; uvx --from 'star-chamber[otari]>=0.11.0' star-chamber review --context-file "$SC_TMPDIR/context.txt" --format json [--provider ...] file1.py > "$SC_TMPDIR/round-1.json"
 ```
 
 Do NOT redirect stderr into the round file (no `2>&1`) — `uv` prints install messages to stderr which would corrupt the JSON.
@@ -674,11 +684,11 @@ The SDK ships the council protocol schemas as package data:
 
 ```bash
 # List available schemas.
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema list
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema list
 
 # Print a specific schema.
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema council-config
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber schema code-review-result
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema council-config
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber schema code-review-result
 ```
 
 ### Provider fields
@@ -827,16 +837,16 @@ Error: Otari API base 'https://api.otari.ai/v1' from OTARI_API_BASE ends in an A
 error: No executables are provided by package `star-chamber`
 ```
 - Verify the package exists on PyPI: `pip index versions star-chamber`
-- Try `uvx --reinstall --from 'star-chamber[otari]>=0.10.0' star-chamber list-providers` to clear the cache.
+- Try `uvx --reinstall --from 'star-chamber[otari]>=0.11.0' star-chamber list-providers` to clear the cache.
 
 **Requirements are unsatisfiable:**
 ```
   × No solution found when resolving tool dependencies:
   ╰─▶ Because only star-chamber[otari]<=0.9.0 is available and you require
-      star-chamber[otari]>=0.10.0, we can conclude that your requirements
+      star-chamber[otari]>=0.11.0, we can conclude that your requirements
       are unsatisfiable.
 ```
-- Retry with a refreshed index before treating this as a real floor failure: `uvx --refresh --from 'star-chamber[otari]>=0.10.0' star-chamber list-providers`.
+- Retry with a refreshed index before treating this as a real floor failure: `uvx --refresh --from 'star-chamber[otari]>=0.11.0' star-chamber list-providers`.
 - A floor raised soon after the release it names can fail against a stale index. PyPI's JSON API and its `/simple/` index can report different newest versions for some minutes, in either direction, and `uv` caches its own index read until asked to refresh. The message names a newest version lower than the floor either way, so it reads like a typo in the constraint.
 - Where a refreshed read still cannot resolve it, the floor is genuinely unavailable. Check what the index offers: `uvx --refresh --from 'star-chamber[otari]' star-chamber list-providers`.
 
@@ -851,7 +861,7 @@ A member can also fail for answering outside a closed set. That is a reply that 
 ### Checking Provider Status
 
 ```bash
-uvx --from 'star-chamber[otari]>=0.10.0' star-chamber list-providers
+uvx --from 'star-chamber[otari]>=0.11.0' star-chamber list-providers
 ```
 
 This shows all configured providers, their models, and connection status (direct, otari, or local).
