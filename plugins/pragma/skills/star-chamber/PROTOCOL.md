@@ -401,7 +401,7 @@ The council asks one member to write the session assessment after the rounds fin
 ### JSON Output Structure
 
 **Code review** (`mode: "code-review"`) output fields:
-- `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
+- `spec_version` — the protocol version that produced the document, which is not the package version: 0.11.0 reports 0.11.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator the groupings below were computed over.
 - `consensus_issues` — the places every provider that answered cited (address first).
@@ -415,7 +415,7 @@ The council asks one member to write the session assessment after the rounds fin
 - `summary` — an object, not prose. `total_issues` counts the groups across the three buckets above, and `consensus_count` and `majority_count` count the first two of them. All three count groups rather than findings, so a group several members described counts once. `synthesis` holds one member's assessment of the session in one or two sentences, written without seeing which member said what, and is empty where no member wrote one. `synthesized_by` names the member asked, whether or not it answered, and is null where none could be asked. `synthesis_error` carries the provider and the error where a member was asked and produced nothing usable. `synthesized_by` and `synthesis_error` are always present, so a null reports an absence and is told apart from a key the output never wrote. Three rules stop a summary contradicting itself. A recorded error requires a named author. An assessment requires a named author and no recorded error. An author named beside an empty assessment requires a recorded error, which is what tells a member that was asked and wrote nothing from one that was never asked. An author is never an empty name.
 
 **Design question** (`mode: "design-question"`) output fields:
-- `spec_version` — the protocol version that produced the document, which is not the package version: 0.10.0 reports 0.9.
+- `spec_version` — the protocol version that produced the document, which is not the package version: 0.11.0 reports 0.11.
 - `providers_used` — every provider asked, including any that then failed.
 - `providers_responded` — the providers that returned a usable answer, and the denominator for `consensus_recommendation`.
 - `prompt` — the original question.
