@@ -69,6 +69,14 @@ Use descriptive branch names with these prefixes:
 | `docs/` | Documentation only | `docs/update-readme` |
 | `chore/` | Maintenance tasks | `chore/upgrade-dependencies` |
 
+Beyond this setup, perform exactly the git operation the user asks for and nothing around it. Do not merge, rebase, push, or create branches the user did not ask for.
+
+When the user asks you to rebase a branch or bring it up to date, rebase it onto `main`, or onto the branch the user names. Do not merge the base branch into it. For `main`:
+
+```bash
+BRANCH=$(git symbolic-ref --short HEAD); git checkout main && git pull && git checkout "$BRANCH" && git rebase main
+```
+
 ### Scope Verification
 
 Before coding:
@@ -213,6 +221,7 @@ Verify these before marking work as done.
 - Keep PRs focused; large PRs are hard to review.
 - Link PRs to issues using keywords: `Fixes #123`, `Closes #456`.
 - Rebase feature branches onto `main` before merging to keep history linear.
+- Branch each Pull Request from `main`. Do not stack Pull Requests on one another unless the user asks.
 - Absorb fixup commits with `git rebase --autosquash` before merging. Preserve meaningful commit history otherwise, and do not collapse planned units into one commit.
 
 ### Review Feedback
