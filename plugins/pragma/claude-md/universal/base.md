@@ -69,6 +69,14 @@ Use descriptive branch names with these prefixes:
 | `docs/` | Documentation only | `docs/update-readme` |
 | `chore/` | Maintenance tasks | `chore/upgrade-dependencies` |
 
+Beyond this setup, perform exactly the git operation the user asks for and nothing around it. Do not merge, rebase, push, or create branches the user did not ask for.
+
+When the user asks you to rebase a branch or bring it up to date, rebase it onto `main`, or onto the branch the user names. Do not merge the base branch into it. For `main`:
+
+```bash
+BRANCH=$(git symbolic-ref --short HEAD); git checkout main && git pull && git checkout "$BRANCH" && git rebase main
+```
+
 ### Scope Verification
 
 Before coding:
@@ -176,7 +184,7 @@ All three checkpoint modes below are valid. Default to green commits, and ask on
 
 ### Docstrings and Comments
 
-- Default to writing no comments. Add one only when the why is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug.
+- Default to writing no comments. Add one only when the why is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug. Where a language's rules require doc comments on declarations, those rules take precedence for declarations.
 - A docstring documents the intent of the unit and the contract it offers. Do not reference callers, downstream behavior, or test code. Do not assume or describe context that exists only at the call site — the docstring must be intelligible without knowing who calls the function or why.
 - Only describe this function, class, or module. Implementation details of other modules do not belong here.
 - Use US English in code, docstrings, comments, and identifiers.
@@ -213,6 +221,7 @@ Verify these before marking work as done.
 - Keep PRs focused; large PRs are hard to review.
 - Link PRs to issues using keywords: `Fixes #123`, `Closes #456`.
 - Rebase feature branches onto `main` before merging to keep history linear.
+- Branch each Pull Request from `main`. Do not stack Pull Requests on one another unless the user asks.
 - Absorb fixup commits with `git rebase --autosquash` before merging. Preserve meaningful commit history otherwise, and do not collapse planned units into one commit.
 
 ### Review Feedback
