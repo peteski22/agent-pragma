@@ -176,7 +176,7 @@ All three checkpoint modes below are valid. Default to green commits, and ask on
 
 ### Docstrings and Comments
 
-- Default to writing no comments. Add one only when the why is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug.
+- Default to writing no comments. Add one only when the why is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug. Where a language's rules require doc comments on declarations, those rules take precedence for declarations.
 - A docstring documents the intent of the unit and the contract it offers. Do not reference callers, downstream behavior, or test code. Do not assume or describe context that exists only at the call site — the docstring must be intelligible without knowing who calls the function or why.
 - Only describe this function, class, or module. Implementation details of other modules do not belong here.
 - Use US English in code, docstrings, comments, and identifiers.

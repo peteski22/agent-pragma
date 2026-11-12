@@ -96,6 +96,7 @@ For each file, check for violations. Each proverb is classified as HARD or SHOUL
 6. **A little copying is better than a little dependency** (SHOULD)
    - Look for: imports added for trivial functionality (<20 lines)
    - Consider: whether copying would be simpler
+   - Also look for: a new dependency or hand-written code that the standard library of the `go.mod` Go version already provides. Check with `go doc <pkg>`, and confirm the API exists at the `go.mod` version, since the installed toolchain may be newer. Do not flag code for missing an API that needs a newer Go than `go.mod` declares. Do not rely on recalled knowledge of the standard library.
    - Justification: Well-maintained dependencies can be appropriate
 
 7. **Clear is better than clever** (SHOULD)

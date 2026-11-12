@@ -1,17 +1,21 @@
 {
   "name": "go-effective",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "input": ["git diff (*.go files)"],
   "output_schema": "hard/should/warn with JSON structure",
   "assumes": [
     "gofmt has run",
-    "golangci-lint has passed"
+    "golangci-lint has passed",
+    "go fix -diff ./... is clean (Go 1.26 or later)"
   ],
   "scope": [
     "Naming conventions",
+    "Package layout and declaration order",
+    "Doc comment presence and content",
     "Error handling style",
     "Interface design",
     "Control flow patterns",
+    "Test code conventions",
     "Idiomatic Go (Effective Go)"
   ],
   "excludes": [

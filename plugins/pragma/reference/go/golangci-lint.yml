@@ -1,5 +1,6 @@
 # Example golangci-lint configuration.
 # Copy to your project and replace {org} and {repo} with your values.
+# Requires golangci-lint v2.6.0 or later (for the modernize linter).
 
 version: "2"
 
@@ -8,10 +9,12 @@ linters:
     - errcheck
     - govet
     - ineffassign
+    - modernize
     - staticcheck
     - unused
     - tagliatelle
     - tagalign
+    - usetesting
   settings:
     tagliatelle:
       case:
